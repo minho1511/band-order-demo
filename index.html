@@ -44,6 +44,10 @@
     .eyebrow { margin-bottom: 3px; color: var(--green-dark); font-weight: 800; font-size: 11px; letter-spacing: .08em; }
     .post-title { font-size: 17px; font-weight: 800; letter-spacing: -.015em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .post-meta { margin-top: 4px; color: var(--muted); font-size: 12px; }
+    .close-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+    .close-btn { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line-strong); background: #fff; color: var(--text); font-weight: 800; font-size: 12px; cursor: pointer; }
+    .close-btn.closed { background: var(--red-soft); color: var(--red); border-color: #e8a7a1; }
+    .close-note { color: var(--muted); font-size: 11.5px; font-weight: 700; }
     .post-picker { width: min(360px, 36vw); flex: none; }
     .post-picker label { display: block; margin-bottom: 6px; color: var(--muted); font-size: 11px; font-weight: 800; }
     .post-picker-line { display: flex; align-items: center; gap: 9px; }
@@ -240,6 +244,7 @@
         <div class="eyebrow">선택한 BAND 게시글</div>
         <div id="postTitle" class="post-title"></div>
         <div id="postMeta" class="post-meta"></div>
+        <div class="close-row"><button id="closeBtn" class="close-btn" type="button" hidden></button><span id="closeNote" class="close-note"></span></div>
       </div>
       <div class="post-picker">
         <label for="postSelect">주문글 선택</label>
@@ -368,7 +373,7 @@
 
       // 빌드 시 주석 뒤의 빈 배열만 실제 게시글 JSON 배열로 교체합니다.
       const POSTS_DATA = /*__POSTS_DATA__*/ [{"postKey": "demo-1", "title": "🍎 부사사과 5kg 공구", "createdAt": "2026-08-19T08:00:00", "comments": [{"id": "d1-1", "author": "단골이맘", "authorKey": "m1", "comment": "2박스요", "createdAt": "2026-08-19T08:05:00", "status": "주문", "note": "", "deleted": false}, {"id": "d1-2", "author": "행복한하루", "authorKey": "m2", "comment": "1", "createdAt": "2026-08-19T08:07:00", "status": "주문", "note": "", "deleted": false}, {"id": "d1-3", "author": "제인", "authorKey": "m3", "comment": "1/1", "createdAt": "2026-08-19T08:11:00", "status": "주문", "note": "", "deleted": false}, {"id": "d1-4", "author": "미소천사", "authorKey": "m4", "comment": "세 박스요", "createdAt": "2026-08-19T08:20:00", "status": "주문", "note": "", "deleted": false}, {"id": "d1-5", "author": "봄날", "authorKey": "m5", "comment": "2봉", "createdAt": "2026-08-19T08:31:00", "status": "수령", "note": "", "deleted": false}]}, {"postKey": "demo-2", "title": "🍑 딱복 천도복숭아", "createdAt": "2026-08-19T07:00:00", "comments": [{"id": "d2-1", "author": "라라", "authorKey": "m6", "comment": "1봉지요", "createdAt": "2026-08-19T07:10:00", "status": "주문", "note": "", "deleted": false}, {"id": "d2-2", "author": "단골이맘", "authorKey": "m1", "comment": "2", "createdAt": "2026-08-19T07:15:00", "status": "주문", "note": "", "deleted": false}, {"id": "d2-3", "author": "하늘색", "authorKey": "m7", "comment": "한개요", "createdAt": "2026-08-19T07:22:00", "status": "주문", "note": "", "deleted": false}, {"id": "d2-4", "author": "코코맘", "authorKey": "m8", "comment": "3봉", "createdAt": "2026-08-19T07:41:00", "status": "주문", "note": "", "deleted": false}]}, {"postKey": "demo-3", "title": "🥬 유기농 애호박·오이 묶음", "createdAt": "2026-08-18T18:00:00", "comments": [{"id": "d3-1", "author": "제인", "authorKey": "m3", "comment": "애호박 2 오이 1", "createdAt": "2026-08-18T18:05:00", "status": "주문", "note": "", "deleted": false}, {"id": "d3-2", "author": "봄날", "authorKey": "m5", "comment": "1", "createdAt": "2026-08-18T18:19:00", "status": "주문", "note": "", "deleted": false}, {"id": "d3-3", "author": "라라", "authorKey": "m6", "comment": "2", "createdAt": "2026-08-18T18:33:00", "status": "취소", "note": "고객요청", "deleted": true}]}];
-      const COLLECTED_AT = "2026. 08. 19. 17:01";
+      const COLLECTED_AT = "2026. 08. 19. 17:20";
       const BACKEND_URL = "";  // Cloudflare Worker 주소(빌드 시 주입). 없으면 새로고침으로 대체.
 
       const mockRawComments = [
@@ -425,7 +430,7 @@
         if (_allPostCache) return _allPostCache;
         // BAND comment_key는 게시글 내에서만 유일 → 전체 보기에선 게시글키로 네임스페이스해 충돌 방지
         const comments = posts.flatMap((p, pi) => Array.isArray(p.comments)
-          ? p.comments.map(c => ({ ...c, id: `${p.postKey}::${c.id}`, _post: p.title, _postIdx: pi }))
+          ? p.comments.map(c => ({ ...c, id: `${p.postKey}::${c.id}`, _post: p.title, _postIdx: pi, _postKey: p.postKey }))
           : []);
         _allPostCache = { title: '📋 전체 주문 (모든 게시글)', postKey: '__ALL__', comments };
         return _allPostCache;
@@ -436,17 +441,34 @@
       function loadManual() { try { const a = JSON.parse(localStorage.getItem(MANUAL_KEY)); return Array.isArray(a) ? a : []; } catch (_) { return []; } }
       function saveManual() { try { localStorage.setItem(MANUAL_KEY, JSON.stringify(manualOrders)); } catch (_) { /* 저장 제한 무시 */ } }
       let manualOrders = loadManual();
+      // 마감(close): 마감한 글은 마감 시각 이후에 달린 댓글을 집계에서 제외(마감 후 주문 혼동 방지).
+      const CLOSED_KEY = 'brise-band-closed';
+      function loadClosed() { try { const o = JSON.parse(localStorage.getItem(CLOSED_KEY)); return (o && typeof o === 'object') ? o : {}; } catch (_) { return {}; } }
+      function saveClosed() { try { localStorage.setItem(CLOSED_KEY, JSON.stringify(closedPosts)); } catch (_) { /* 무시 */ } }
+      let closedPosts = loadClosed();  // { postKey: 마감시각ISO }
+      function isAfterClose(c) {
+        if (c._manual) return false;  // 직접추가 주문은 항상 유지
+        const closedAt = closedPosts[c._postKey];
+        return closedAt && String(c.createdAt || '') > String(closedAt);
+      }
       function manualRows(postKey) {
         return manualOrders
           .filter(m => postKey == null || m.postKey === postKey)
-          .map(m => ({ id: m.id, author: m.author, authorKey: 'manual', comment: String(m.comment ?? ''), createdAt: m.createdAt, status: m.status, note: m.note || '', deleted: false, _manual: true, _post: m._post }));
+          .map(m => ({ id: m.id, author: m.author, authorKey: 'manual', comment: String(m.comment ?? ''), createdAt: m.createdAt, status: m.status, note: m.note || '', deleted: false, _manual: true, _post: m._post, _postKey: m.postKey }));
       }
       function rawComments() {
-        const post = selectedPost();
-        const base = Array.isArray(post.comments) ? post.comments : [];
-        return selectedPostIndex < 0 ? [...base, ...manualRows(null)] : [...base, ...manualRows(post.postKey)];
+        // 개별글 보기도 전체보기와 동일하게 id를 postKey::댓글로 통일(편집·체크가 화면 간에 어긋나지 않게).
+        if (selectedPostIndex < 0) {
+          return [...allPost().comments, ...manualRows(null)];
+        }
+        const post = posts[selectedPostIndex];
+        const pk = String(post.postKey);
+        const base = (Array.isArray(post.comments) ? post.comments : [])
+          .map(c => ({ ...c, id: `${pk}::${c.id}`, _postIdx: selectedPostIndex, _postKey: pk }));
+        return [...base, ...manualRows(pk)];
       }
-      function postStorageKey(post = selectedPost()) { return `brise-band-${String(post.postKey)}`; }
+      // 편집(수량·상태·비고)은 화면과 무관하게 하나의 저장소를 공유한다(id가 postKey::댓글로 통일됨).
+      function postStorageKey() { return 'brise-band-edits'; }
 
       function plainCommentText(value) {
         // BAND 멘션 태그의 속성값은 숨기되 멘션 이름과 이모지는 일반 문자열로 보존한다.
@@ -487,7 +509,9 @@
         const edits = {};
         rawComments().forEach(comment => {
           const parsed = recognizeQuantity(comment.comment);
-          edits[comment.id] = { qty: parsed.quantity, status: STATUS_LIST.includes(comment.status) ? comment.status : '주문', note: String(comment.note || '') };
+          // 손님이 밴드에서 지운 댓글은 기본 '취소'로(포장 수량에 안 들어가게). 기록은 그대로 보여요.
+          const defStatus = comment.deleted ? '취소' : (STATUS_LIST.includes(comment.status) ? comment.status : '주문');
+          edits[comment.id] = { qty: parsed.quantity, status: defStatus, note: String(comment.note || '') };
         });
         return edits;
       }
@@ -525,7 +549,13 @@
       }
 
       function persistEdits(showHint = true) {
-        try { localStorage.setItem(postStorageKey(), JSON.stringify(state.edits)); } catch (_) { return; }
+        // 단일 저장소에 현재 화면 편집을 병합(다른 글 편집을 덮어쓰지 않게).
+        try {
+          let store = {};
+          try { store = JSON.parse(localStorage.getItem(postStorageKey())) || {}; } catch (_) { store = {}; }
+          Object.assign(store, state.edits);
+          localStorage.setItem(postStorageKey(), JSON.stringify(store));
+        } catch (_) { return; }
         if (!showHint) return;
         const hint = el('savedHint');
         hint.classList.add('show');
@@ -549,6 +579,7 @@
       function filteredComments() {
         const needle = state.search.trim().toLocaleLowerCase('ko');
         return rawComments().filter(comment => {
+          if (isAfterClose(comment)) return false;  // 마감 후 달린 댓글 제외
           const commentDate = dateOnly(comment.createdAt);
           if (commentDate < state.dateFrom || commentDate > state.dateTo) return false;
           if (!state.includeAdmin && isAdmin(comment)) return false;
@@ -558,7 +589,7 @@
             if (statusFilter === '미수령') { if (st !== '주문' && st !== '대기') return false; }
             else if (st !== statusFilter) return false;
           }
-          const haystack = `${comment.author || ''} ${comment.comment || ''} ${edit.note}`.toLocaleLowerCase('ko');
+          const haystack = `${comment.author || ''} ${comment.comment || ''} ${comment._post || ''} ${edit.note}`.toLocaleLowerCase('ko');
           return !needle || haystack.includes(needle);
         });
       }
@@ -602,6 +633,23 @@
         el('postMeta').textContent = selectedPostIndex < 0
           ? `모든 게시글 ${posts.length}개 · 수집된 댓글 ${rawComments().length}개 · 기간으로 좁혀 보세요`
           : `밴드 · 게시글 ID ${String(post.postKey ?? '미상')} · 수집된 댓글 ${rawComments().length}개`;
+        // 마감 버튼: 개별 게시글을 볼 때만 표시(전체 보기에선 숨김).
+        const btn = el('closeBtn'), note = el('closeNote');
+        if (selectedPostIndex < 0) {
+          btn.hidden = true; note.textContent = '';
+        } else {
+          const pk = String(post.postKey);
+          const closed = closedPosts[pk];
+          btn.hidden = false;
+          btn.textContent = closed ? '🔓 마감 해제' : '🔒 마감(이후 댓글 제외)';
+          btn.classList.toggle('closed', !!closed);
+          if (closed) {
+            const hidden = (Array.isArray(post.comments) ? post.comments : []).filter(c => String(c.createdAt || '') > String(closed)).length;
+            note.textContent = `마감됨 · 마감 후 댓글 ${hidden}건은 집계에서 빠져요`;
+          } else {
+            note.textContent = '10개 마감처럼, 이 글을 마감하면 그 뒤 댓글은 안 들어와요';
+          }
+        }
       }
 
       function updateSummary(rows = filteredComments()) {
@@ -631,6 +679,7 @@
           el('orderRows').innerHTML = `<tr><td colspan="8" class="empty">${hasCustomerOrder ? '조건에 맞는 주문이 없습니다. 기간이나 검색어를 확인해 주세요.' : '아직 집계할 고객 주문이 없습니다. 새 댓글이 들어오면 여기에 표시됩니다.'}</td></tr>`;
           el('tableFoot').innerHTML = '';
           if (typeof syncCheckAll === 'function') syncCheckAll();
+          if (typeof buildTextList === 'function') buildTextList(rows);
           return;
         }
 
@@ -814,7 +863,9 @@
       el('postSelect').addEventListener('change', event => {
         // 입력 이벤트마다 저장하지만 게시글 전환 직전에도 현재 글 편집을 보존한다.
         persistEdits(false);
-        selectedPostIndex = Number(event.target.value) || 0;
+        selectedPostIndex = Number(event.target.value);
+        if (!Number.isFinite(selectedPostIndex)) selectedPostIndex = -1;
+        checkedIds.clear();
         state.edits = loadPostEdits();
         state.search = '';
         el('searchInput').value = '';
@@ -838,8 +889,14 @@
       el('printBtn').addEventListener('click', printPreparationList);
       el('exportBtn').addEventListener('click', exportCsv);
       el('resetBtn').addEventListener('click', () => {
-        if (!confirm('현재 주문글의 수정된 수량, 상태, 비고를 모두 초기값으로 되돌릴까요?')) return;
-        try { localStorage.removeItem(postStorageKey()); } catch (_) { /* 저장 제한 시 메모리 값만 초기화 */ }
+        if (!confirm('지금 화면의 주문들만 수정한 수량·상태·비고를 초기값으로 되돌릴까요? (다른 글은 유지)')) return;
+        // 단일 저장소에서 현재 화면 id만 제거(다른 글 편집은 보존).
+        try {
+          let store = {};
+          try { store = JSON.parse(localStorage.getItem(postStorageKey())) || {}; } catch (_) { store = {}; }
+          Object.keys(state.edits).forEach(id => { delete store[id]; });
+          localStorage.setItem(postStorageKey(), JSON.stringify(store));
+        } catch (_) { /* 저장 제한 시 메모리 값만 초기화 */ }
         state.edits = defaultEdits();
         render();
       });
@@ -895,6 +952,21 @@
         document.querySelectorAll('.sfilter').forEach(b => b.classList.toggle('active', b === btn));
         render();
       }));
+
+      // 마감(close): 이 글을 마감하면 마감 이후 댓글은 집계에서 빠짐(현장 판매 혼동 방지).
+      el('closeBtn').addEventListener('click', () => {
+        if (selectedPostIndex < 0) return;
+        const pk = String(posts[selectedPostIndex].postKey);
+        if (closedPosts[pk]) {
+          if (!confirm('마감을 해제할까요? 마감 후 달린 댓글도 다시 집계에 들어옵니다.')) return;
+          delete closedPosts[pk];
+        } else {
+          if (!confirm('지금 이 글을 마감할까요? 지금 이후에 달리는 댓글은 집계에서 제외됩니다. (언제든 해제 가능)')) return;
+          closedPosts[pk] = new Date().toISOString();
+        }
+        saveClosed();
+        render();
+      });
 
       // 줄글(텍스트) 보기 토글 + 복사
       el('textToggleBtn').addEventListener('click', () => {
