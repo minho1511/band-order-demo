@@ -44,6 +44,22 @@
     .eyebrow { margin-bottom: 3px; color: var(--green-dark); font-weight: 800; font-size: 11px; letter-spacing: .08em; }
     .post-title { font-size: 17px; font-weight: 800; letter-spacing: -.015em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .post-meta { margin-top: 4px; color: var(--muted); font-size: 12px; }
+    .post-list-section { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); padding: 16px 18px; margin-bottom: 16px; }
+    .pls-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+    .pls-head h2 { margin: 0; font-size: 15px; }
+    .pls-hint { font-weight: 600; color: var(--muted); font-size: 11.5px; }
+    .pls-head .control { width: min(260px, 45vw); height: 36px; }
+    .pls-rows { display: flex; flex-direction: column; gap: 8px; max-height: 62vh; overflow-y: auto; }
+    .pls-row { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); cursor: pointer; }
+    .pls-row:hover { border-color: var(--green); background: var(--green-soft); }
+    .pls-title { flex: 1; min-width: 0; font-weight: 800; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pls-date { color: var(--faint); font-size: 12px; white-space: nowrap; flex: none; }
+    .pls-badge { padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 800; background: #fff; border: 1px solid var(--line); color: var(--muted); flex: none; }
+    .pls-badge.o { color: var(--blue); border-color: #c5d9ee; background: var(--blue-soft); }
+    .pls-badge.n { color: var(--red); border-color: #ecc4c0; background: var(--red-soft); }
+    .pls-edit { flex: none; padding: 6px 9px; border: 1px solid var(--line); border-radius: 8px; background: #fff; font-size: 13px; cursor: pointer; }
+    .pls-empty { padding: 30px; text-align: center; color: var(--muted); }
+    .back-list { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line-strong); background: #fff; color: var(--text); font-weight: 800; font-size: 12px; cursor: pointer; margin-right: 8px; }
     .close-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
     .close-btn { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line-strong); background: #fff; color: var(--text); font-weight: 800; font-size: 12px; cursor: pointer; }
     .close-btn.closed { background: var(--red-soft); color: var(--red); border-color: #e8a7a1; }
@@ -241,7 +257,7 @@
 
     <section class="post-banner" aria-label="선택한 밴드 게시글">
       <div class="post-copy">
-        <div class="eyebrow">선택한 BAND 게시글</div>
+        <div class="eyebrow"><button id="backListBtn" class="back-list" type="button" hidden>← 게시글 목록</button>선택한 BAND 게시글</div>
         <div id="postTitle" class="post-title"></div>
         <div id="postMeta" class="post-meta"></div>
         <div class="close-row"><button id="closeBtn" class="close-btn" type="button" hidden></button><span id="closeNote" class="close-note"></span></div>
@@ -255,7 +271,13 @@
       </div>
     </section>
 
-    <section class="statbar" aria-label="주문 요약">
+    <section id="postListSection" class="post-list-section" hidden aria-label="게시글 목록">
+      <div class="pls-head"><h2>📁 게시글 목록 <span class="pls-hint">글을 누르면 그 글 주문만 보여요 · 최근 글부터</span></h2>
+        <input id="postListSearch" class="control" type="search" placeholder="상품·제목 검색" autocomplete="off"></div>
+      <div id="postListRows" class="pls-rows"></div>
+    </section>
+
+    <section id="statbarSection" class="statbar" aria-label="주문 요약">
       <div class="stat main"><span class="stat-num" id="totalOrders">0</span><span class="stat-cap">주문건수</span></div>
       <div class="stat main"><span class="stat-num" id="totalQty">0</span><span class="stat-cap">총수량</span></div>
       <div class="stat s-order"><span class="stat-num" id="countOrder">0</span><span class="stat-cap">주문</span></div>
@@ -264,7 +286,7 @@
       <div class="stat s-cancel"><span class="stat-num" id="countCancel">0</span><span class="stat-cap">취소</span></div>
     </section>
 
-    <section class="panel">
+    <section id="orderPanel" class="panel">
       <div class="filters">
         <div class="field">
           <label for="adminName">관리자 계정 지정 <span style="font-weight:600;color:var(--faint)">(여러 명은 쉼표로)</span></label>
@@ -373,7 +395,7 @@
 
       // 빌드 시 주석 뒤의 빈 배열만 실제 게시글 JSON 배열로 교체합니다.
       const POSTS_DATA = /*__POSTS_DATA__*/ [{"postKey": "demo-1", "title": "🍎 부사사과 5kg 공구", "createdAt": "2026-08-19T08:00:00", "comments": [{"id": "d1-1", "author": "단골이맘", "authorKey": "m1", "comment": "2박스요", "createdAt": "2026-08-19T08:05:00", "status": "주문", "note": "", "deleted": false}, {"id": "d1-2", "author": "행복한하루", "authorKey": "m2", "comment": "1", "createdAt": "2026-08-19T08:07:00", "status": "주문", "note": "", "deleted": false}, {"id": "d1-3", "author": "제인", "authorKey": "m3", "comment": "1/1", "createdAt": "2026-08-19T08:11:00", "status": "주문", "note": "", "deleted": false}, {"id": "d1-4", "author": "미소천사", "authorKey": "m4", "comment": "세 박스요", "createdAt": "2026-08-19T08:20:00", "status": "주문", "note": "", "deleted": false}, {"id": "d1-5", "author": "봄날", "authorKey": "m5", "comment": "2봉", "createdAt": "2026-08-19T08:31:00", "status": "수령", "note": "", "deleted": false}]}, {"postKey": "demo-2", "title": "🍑 딱복 천도복숭아", "createdAt": "2026-08-19T07:00:00", "comments": [{"id": "d2-1", "author": "라라", "authorKey": "m6", "comment": "1봉지요", "createdAt": "2026-08-19T07:10:00", "status": "주문", "note": "", "deleted": false}, {"id": "d2-2", "author": "단골이맘", "authorKey": "m1", "comment": "2", "createdAt": "2026-08-19T07:15:00", "status": "주문", "note": "", "deleted": false}, {"id": "d2-3", "author": "하늘색", "authorKey": "m7", "comment": "한개요", "createdAt": "2026-08-19T07:22:00", "status": "주문", "note": "", "deleted": false}, {"id": "d2-4", "author": "코코맘", "authorKey": "m8", "comment": "3봉", "createdAt": "2026-08-19T07:41:00", "status": "주문", "note": "", "deleted": false}]}, {"postKey": "demo-3", "title": "🥬 유기농 애호박·오이 묶음", "createdAt": "2026-08-18T18:00:00", "comments": [{"id": "d3-1", "author": "제인", "authorKey": "m3", "comment": "애호박 2 오이 1", "createdAt": "2026-08-18T18:05:00", "status": "주문", "note": "", "deleted": false}, {"id": "d3-2", "author": "봄날", "authorKey": "m5", "comment": "1", "createdAt": "2026-08-18T18:19:00", "status": "주문", "note": "", "deleted": false}, {"id": "d3-3", "author": "라라", "authorKey": "m6", "comment": "2", "createdAt": "2026-08-18T18:33:00", "status": "취소", "note": "고객요청", "deleted": true}]}];
-      const COLLECTED_AT = "2026. 08. 19. 17:24";
+      const COLLECTED_AT = "2026. 08. 19. 17:32";
       const BACKEND_URL = "";  // Cloudflare Worker 주소(빌드 시 주입). 없으면 새로고침으로 대체.
 
       const mockRawComments = [
@@ -410,7 +432,8 @@
       const avatarColors = ['#16876b', '#b06d27', '#5877b7', '#7b5aaa', '#b14e61', '#55766d'];
       const el = id => document.getElementById(id);
 
-      let selectedPostIndex = -1;  // 기본: 전체 보기(모든 게시글 한눈에)
+      let selectedPostIndex = -2;  // 기본: 게시글 목록(글 누르면 그 글 주문만) / -1=전체 주문 / >=0=개별글
+      let postListSearch = '';
       let state = { ...loadGlobalState(), edits: {} };
       let saveTimer;
       const checkedIds = new Set();  // 일괄처리용 체크 선택(세션 유지)
@@ -430,12 +453,15 @@
         if (_allPostCache) return _allPostCache;
         // BAND comment_key는 게시글 내에서만 유일 → 전체 보기에선 게시글키로 네임스페이스해 충돌 방지
         const comments = posts.flatMap((p, pi) => Array.isArray(p.comments)
-          ? p.comments.map(c => ({ ...c, id: `${p.postKey}::${c.id}`, _post: p.title, _postIdx: pi, _postKey: p.postKey }))
+          ? p.comments.map(c => ({ ...c, id: `${p.postKey}::${c.id}`, _post: displayTitle(p), _postIdx: pi, _postKey: p.postKey }))
           : []);
         _allPostCache = { title: '📋 전체 주문 (모든 게시글)', postKey: '__ALL__', comments };
         return _allPostCache;
       }
-      function selectedPost() { return selectedPostIndex < 0 ? allPost() : posts[selectedPostIndex]; }
+      function selectedPost() {
+        if (selectedPostIndex === -2) return { title: '📁 게시글 목록', postKey: '__LIST__', comments: [] };
+        return selectedPostIndex < 0 ? allPost() : posts[selectedPostIndex];
+      }
       // 수동추가 주문(누락·전화·현장 주문 직접입력). 브라우저에 저장돼 데이터 갱신에도 유지.
       const MANUAL_KEY = 'brise-band-manual';
       function loadManual() { try { const a = JSON.parse(localStorage.getItem(MANUAL_KEY)); return Array.isArray(a) ? a : []; } catch (_) { return []; } }
@@ -446,6 +472,16 @@
       function loadClosed() { try { const o = JSON.parse(localStorage.getItem(CLOSED_KEY)); return (o && typeof o === 'object') ? o : {}; } catch (_) { return {}; } }
       function saveClosed() { try { localStorage.setItem(CLOSED_KEY, JSON.stringify(closedPosts)); } catch (_) { /* 무시 */ } }
       let closedPosts = loadClosed();  // { postKey: 마감시각ISO }
+      // 제목 직접수정(사장님이 물품 찾기 편하게 제목 변형). { postKey: 새제목 }
+      const TITLES_KEY = 'brise-band-titles';
+      function loadTitles() { try { const o = JSON.parse(localStorage.getItem(TITLES_KEY)); return (o && typeof o === 'object') ? o : {}; } catch (_) { return {}; } }
+      function saveTitles() { try { localStorage.setItem(TITLES_KEY, JSON.stringify(customTitles)); } catch (_) { /* 무시 */ } }
+      let customTitles = loadTitles();
+      function displayTitle(post) {
+        if (!post) return '';
+        const custom = customTitles[String(post.postKey)];
+        return (custom && custom.trim()) ? custom : (post.title || '제목 없는 주문글');
+      }
       function isAfterClose(c) {
         if (c._manual) return false;  // 직접추가 주문은 항상 유지
         const closedAt = closedPosts[c._postKey];
@@ -460,6 +496,7 @@
       }
       function rawComments() {
         // 개별글 보기도 전체보기와 동일하게 id를 postKey::댓글로 통일(편집·체크가 화면 간에 어긋나지 않게).
+        // -2(목록)·-1(전체) 모두 전체 댓글 기반(목록의 주문/미수령 수 계산에 필요).
         if (selectedPostIndex < 0) {
           return [...allPost().comments, ...manualRows(null)];
         }
@@ -643,10 +680,13 @@
 
       function updatePostBanner() {
         const post = selectedPost();
-        el('postTitle').textContent = post.title || '제목 없는 주문글';
-        el('postMeta').textContent = selectedPostIndex < 0
+        el('postTitle').textContent = displayTitle(post);
+        el('backListBtn').hidden = (selectedPostIndex === -2);
+        el('postMeta').textContent = selectedPostIndex === -2
+          ? `게시글 ${posts.length}개 · 보고 싶은 상품 글을 눌러 보세요`
+          : selectedPostIndex < 0
           ? `모든 게시글 ${posts.length}개 · 수집된 댓글 ${rawComments().length}개 · 기간으로 좁혀 보세요`
-          : `밴드 · 게시글 ID ${String(post.postKey ?? '미상')} · 수집된 댓글 ${rawComments().length}개`;
+          : `밴드 · 수집된 댓글 ${rawComments().length}개`;
         // 마감 버튼: 개별 게시글을 볼 때만 표시(전체 보기에선 숨김).
         const btn = el('closeBtn'), note = el('closeNote');
         if (selectedPostIndex < 0) {
@@ -685,8 +725,50 @@
         return { totalQty };
       }
 
+      function setListMode(on) {
+        const ps = el('postListSection'), sb = el('statbarSection'), op = el('orderPanel');
+        if (ps) ps.hidden = !on;
+        if (sb) sb.hidden = on;
+        if (op) op.hidden = on;
+      }
+
+      function renderPostList() {
+        setListMode(true);
+        const needle = postListSearch.trim().toLocaleLowerCase('ko');
+        // 최근 글부터. 각 글의 주문/미수령 수 계산(마감 반영).
+        const rowsHtml = posts.map((p, i) => ({ p, i }))
+          .filter(({ p }) => {
+            if (!needle) return true;
+            return `${displayTitle(p)} ${p.title || ''}`.toLocaleLowerCase('ko').includes(needle);
+          })
+          .sort((a, b) => String(b.p.createdAt || '').localeCompare(String(a.p.createdAt || '')))
+          .map(({ p, i }) => {
+            const pk = String(p.postKey);
+            const cs = (Array.isArray(p.comments) ? p.comments : []).filter(c => {
+              if (isAdmin(c)) return false;
+              const clt = closedPosts[pk] ? Date.parse(closedPosts[pk]) : null;
+              return !(clt && Date.parse(c.createdAt) > clt);
+            });
+            const orders = cs.length;
+            const notPicked = cs.filter(c => {
+              const st = getEdit(`${pk}::${c.id}`).status; return st === '주문' || st === '대기';
+            }).length;
+            const closed = closedPosts[pk] ? '<span class="pls-badge">🔒 마감</span>' : '';
+            const nb = notPicked ? `<span class="pls-badge n">미수령 ${notPicked}</span>` : '';
+            return `<div class="pls-row" data-postidx="${i}">
+              <span class="pls-title">${escapeHtml(displayTitle(p))}</span>
+              <span class="pls-date">${escapeHtml(formatPostDate(p.createdAt))}</span>
+              <span class="pls-badge o">주문 ${orders}</span>${nb}${closed}
+              <button class="pls-edit" data-editpost="${i}" title="제목 바꾸기(물품 찾기 편하게)">✏️</button>
+            </div>`;
+          }).join('');
+        el('postListRows').innerHTML = rowsHtml || '<div class="pls-empty">게시글이 없습니다. 검색어를 확인해 주세요.</div>';
+      }
+
       function render() {
         updatePostBanner();
+        if (selectedPostIndex === -2) { renderPostList(); return; }
+        setListMode(false);
         const rows = filteredComments();
         const { totalQty } = updateSummary(rows);
         if (!rows.length) {
@@ -832,8 +914,8 @@
         if (collectedAt && collectedAt !== collectedAtPlaceholder) {
           el('syncText').textContent = `마지막 수집 ${collectedAt}`;
         }
-        el('postSelect').innerHTML = `<option value="-1">📋 전체 주문 (모든 게시글 한눈에)</option>`
-          + posts.map((post, index) => `<option value="${index}">${escapeHtml(post.title || '제목 없는 주문글')} (${escapeHtml(formatPostDate(post.createdAt))})</option>`).join('');
+        el('postSelect').innerHTML = `<option value="-2">📁 게시글 목록</option><option value="-1">📋 전체 주문 (모든 게시글 한눈에)</option>`
+          + posts.map((post, index) => `<option value="${index}">${escapeHtml(displayTitle(post))} (${escapeHtml(formatPostDate(post.createdAt))})</option>`).join('');
         el('postSelect').value = String(selectedPostIndex);
         el('dataBadge').textContent = isMockData ? '데모 데이터' : '실데이터';
         const sourceNote = isMockData
@@ -980,6 +1062,35 @@
           closedPosts[pk] = new Date().toISOString();
         }
         saveClosed();
+        render();
+      });
+
+      // 게시글 목록: 글 클릭 → 그 글 주문만 / ✏️ 제목편집
+      el('postListRows').addEventListener('click', event => {
+        const eb = event.target.closest('[data-editpost]');
+        if (eb) {
+          const i = Number(eb.dataset.editpost); const p = posts[i];
+          const next = prompt('이 게시글 제목을 바꿔요 (물품 찾기 편하게). 비우면 원래 제목으로.', displayTitle(p));
+          if (next === null) return;
+          const pk = String(p.postKey);
+          if (next.trim()) customTitles[pk] = next.trim(); else delete customTitles[pk];
+          saveTitles(); _allPostCache = null; initializePostSelector(); render();
+          return;
+        }
+        const row = event.target.closest('.pls-row[data-postidx]');
+        if (!row) return;
+        selectedPostIndex = Number(row.dataset.postidx);
+        checkedIds.clear();
+        el('postSelect').value = String(selectedPostIndex);
+        state.edits = loadPostEdits();
+        render();
+      });
+      el('postListSearch').addEventListener('input', event => { postListSearch = event.target.value; renderPostList(); });
+      el('backListBtn').addEventListener('click', () => {
+        persistEdits(false);
+        selectedPostIndex = -2; checkedIds.clear();
+        el('postSelect').value = '-2';
+        state.edits = loadPostEdits();
         render();
       });
 
