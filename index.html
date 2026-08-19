@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>BAND 주문 대시보드 (데모)</title>
+  <title>BAND 주문 대시보드 (샘플 데모)</title>
   <style>
     :root {
       --bg: #f4f7f6; --surface: #ffffff; --surface-2: #f8faf9; --line: #dfe8e4;
@@ -49,11 +49,20 @@
     .pls-head h2 { margin: 0; font-size: 15px; }
     .pls-hint { font-weight: 600; color: var(--muted); font-size: 11.5px; }
     .pls-head .control { width: min(260px, 45vw); height: 36px; }
+    .pls-dates { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .pls-dates[hidden] { display: none; }
+    .pls-datechip { padding: 5px 11px; border-radius: 999px; font-size: 13px; font-weight: 700; background: #fff; border: 1px solid var(--line); color: var(--muted); cursor: pointer; }
+    .pls-datechip b { color: var(--accent, #2563eb); margin-left: 2px; }
+    .pls-datechip.on { background: var(--accent, #2563eb); border-color: var(--accent, #2563eb); color: #fff; }
+    .pls-datechip.on b { color: #fff; }
     .pls-rows { display: flex; flex-direction: column; gap: 8px; max-height: 62vh; overflow-y: auto; }
-    .pls-row { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); cursor: pointer; }
+    /* 고정 컬럼 정렬: 제목 | 날짜 | 주문 | 미수령 | 마감 | ✏️ — 배지가 세로로 딱 맞게 */
+    .pls-row { display: grid; grid-template-columns: minmax(0,1fr) max-content 78px 88px max-content 34px; align-items: center; gap: 10px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); cursor: pointer; }
     .pls-row:hover { border-color: var(--green); background: var(--green-soft); }
-    .pls-title { flex: 1; min-width: 0; font-weight: 800; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .pls-date { color: var(--faint); font-size: 12px; white-space: nowrap; flex: none; }
+    .pls-title { min-width: 0; font-weight: 800; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pls-date { color: var(--faint); font-size: 12px; white-space: nowrap; text-align: right; }
+    .pls-slot { display: flex; justify-content: flex-start; }
+    .pls-slot.c { justify-content: flex-start; }
     .pls-badge { padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 800; background: #fff; border: 1px solid var(--line); color: var(--muted); flex: none; }
     .pls-badge.o { color: var(--blue); border-color: #c5d9ee; background: var(--blue-soft); }
     .pls-badge.n { color: var(--red); border-color: #ecc4c0; background: var(--red-soft); }
@@ -274,6 +283,7 @@
     <section id="postListSection" class="post-list-section" hidden aria-label="게시글 목록">
       <div class="pls-head"><h2>📁 게시글 목록 <span class="pls-hint">글을 누르면 그 글 주문만 보여요 · 최근 글부터</span></h2>
         <input id="postListSearch" class="control" type="search" placeholder="상품·제목 검색" autocomplete="off"></div>
+      <div id="postListDates" class="pls-dates" aria-label="날짜별 보기"></div>
       <div id="postListRows" class="pls-rows"></div>
     </section>
 
@@ -290,7 +300,7 @@
       <div class="filters">
         <div class="field">
           <label for="adminName">관리자 계정 지정 <span style="font-weight:600;color:var(--faint)">(여러 명은 쉼표로)</span></label>
-          <input id="adminName" class="control" type="text" autocomplete="off" placeholder="예: 온빛, 온빛_관리자" aria-describedby="adminHelp">
+          <input id="adminName" class="control" type="text" autocomplete="off" placeholder="예: 샘플청과, 샘플청과_관리자" aria-describedby="adminHelp">
         </div>
         <div class="field">
           <label for="dateFrom">댓글 작성 기간</label>
@@ -394,23 +404,23 @@
       'use strict';
 
       // 빌드 시 주석 뒤의 빈 배열만 실제 게시글 JSON 배열로 교체합니다.
-      const POSTS_DATA = /*__POSTS_DATA__*/ [{"postKey": "demo-1", "title": "🍎 부사사과 5kg 공구", "createdAt": "2026-08-19T08:00:00", "comments": [{"id": "d1-1", "author": "단골이맘", "authorKey": "m1", "comment": "2박스요", "createdAt": "2026-08-19T08:05:00", "status": "주문", "note": "", "deleted": false}, {"id": "d1-2", "author": "행복한하루", "authorKey": "m2", "comment": "1", "createdAt": "2026-08-19T08:07:00", "status": "주문", "note": "", "deleted": false}, {"id": "d1-3", "author": "제인", "authorKey": "m3", "comment": "1/1", "createdAt": "2026-08-19T08:11:00", "status": "주문", "note": "", "deleted": false}, {"id": "d1-4", "author": "미소천사", "authorKey": "m4", "comment": "세 박스요", "createdAt": "2026-08-19T08:20:00", "status": "주문", "note": "", "deleted": false}, {"id": "d1-5", "author": "봄날", "authorKey": "m5", "comment": "2봉", "createdAt": "2026-08-19T08:31:00", "status": "수령", "note": "", "deleted": false}]}, {"postKey": "demo-2", "title": "🍑 딱복 천도복숭아", "createdAt": "2026-08-19T07:00:00", "comments": [{"id": "d2-1", "author": "라라", "authorKey": "m6", "comment": "1봉지요", "createdAt": "2026-08-19T07:10:00", "status": "주문", "note": "", "deleted": false}, {"id": "d2-2", "author": "단골이맘", "authorKey": "m1", "comment": "2", "createdAt": "2026-08-19T07:15:00", "status": "주문", "note": "", "deleted": false}, {"id": "d2-3", "author": "하늘색", "authorKey": "m7", "comment": "한개요", "createdAt": "2026-08-19T07:22:00", "status": "주문", "note": "", "deleted": false}, {"id": "d2-4", "author": "코코맘", "authorKey": "m8", "comment": "3봉", "createdAt": "2026-08-19T07:41:00", "status": "주문", "note": "", "deleted": false}]}, {"postKey": "demo-3", "title": "🥬 유기농 애호박·오이 묶음", "createdAt": "2026-08-18T18:00:00", "comments": [{"id": "d3-1", "author": "제인", "authorKey": "m3", "comment": "애호박 2 오이 1", "createdAt": "2026-08-18T18:05:00", "status": "주문", "note": "", "deleted": false}, {"id": "d3-2", "author": "봄날", "authorKey": "m5", "comment": "1", "createdAt": "2026-08-18T18:19:00", "status": "주문", "note": "", "deleted": false}, {"id": "d3-3", "author": "라라", "authorKey": "m6", "comment": "2", "createdAt": "2026-08-18T18:33:00", "status": "취소", "note": "고객요청", "deleted": true}]}];
-      const COLLECTED_AT = "2026. 08. 19. 17:32";
+      const POSTS_DATA = /*__POSTS_DATA__*/ [{"postKey": "d1", "title": "금 부사사과 5kg 공구", "createdAt": "2026-08-19T09:00:00", "createdMs": 1755990000000, "comments": [{"id": "d1-1", "author": "단골이맘", "authorKey": "m1", "comment": "2박스요", "createdAt": "2026-08-19T09:05:00", "status": "주문", "note": "", "deleted": false}, {"id": "d1-2", "author": "행복한하루", "authorKey": "m2", "comment": "1", "createdAt": "2026-08-19T09:07:00", "status": "주문", "note": "", "deleted": false}, {"id": "d1-3", "author": "제인", "authorKey": "m3", "comment": "1/1", "createdAt": "2026-08-19T09:11:00", "status": "주문", "note": "", "deleted": false}, {"id": "d1-4", "author": "미소천사", "authorKey": "m4", "comment": "세 박스요", "createdAt": "2026-08-19T09:20:00", "status": "주문", "note": "", "deleted": false}, {"id": "d1-5", "author": "봄날", "authorKey": "m5", "comment": "2봉", "createdAt": "2026-08-19T09:31:00", "status": "수령", "note": "", "deleted": false}, {"id": "d1-6", "author": "코코맘", "authorKey": "m8", "comment": "한 박스", "createdAt": "2026-08-19T09:40:00", "status": "수령", "note": "", "deleted": false}]}, {"postKey": "d2", "title": "토 딱복 천도복숭아", "createdAt": "2026-08-19T08:00:00", "createdMs": 1755986400000, "comments": [{"id": "d2-1", "author": "라라", "authorKey": "m6", "comment": "1봉지요", "createdAt": "2026-08-19T08:10:00", "status": "주문", "note": "", "deleted": false}, {"id": "d2-2", "author": "단골이맘", "authorKey": "m1", "comment": "2", "createdAt": "2026-08-19T08:15:00", "status": "주문", "note": "", "deleted": false}, {"id": "d2-3", "author": "하늘색", "authorKey": "m7", "comment": "한개요", "createdAt": "2026-08-19T08:22:00", "status": "주문", "note": "", "deleted": false}, {"id": "d2-4", "author": "코코맘", "authorKey": "m8", "comment": "3봉", "createdAt": "2026-08-19T08:41:00", "status": "수령", "note": "", "deleted": false}]}, {"postKey": "d3", "title": "8/22 유기농 애호박·오이 묶음", "createdAt": "2026-08-19T07:30:00", "createdMs": 1755984600000, "comments": [{"id": "d3-1", "author": "제인", "authorKey": "m3", "comment": "애호박 2 오이 1", "createdAt": "2026-08-19T07:35:00", "status": "주문", "note": "", "deleted": false}, {"id": "d3-2", "author": "봄날", "authorKey": "m5", "comment": "1", "createdAt": "2026-08-19T07:49:00", "status": "주문", "note": "", "deleted": false}, {"id": "d3-3", "author": "라라", "authorKey": "m6", "comment": "2", "createdAt": "2026-08-19T07:55:00", "status": "취소", "note": "고객요청", "deleted": true}]}, {"postKey": "d4", "title": "수 국산 돼지 앞다리살 1kg", "createdAt": "2026-08-19T06:30:00", "createdMs": 1755981000000, "comments": [{"id": "d4-1", "author": "미소천사", "authorKey": "m4", "comment": "2팩", "createdAt": "2026-08-19T06:40:00", "status": "수령", "note": "", "deleted": false}, {"id": "d4-2", "author": "하늘색", "authorKey": "m7", "comment": "1", "createdAt": "2026-08-19T06:55:00", "status": "주문", "note": "", "deleted": false}, {"id": "d4-3", "author": "행복한하루", "authorKey": "m2", "comment": "두 팩", "createdAt": "2026-08-19T07:10:00", "status": "주문", "note": "", "deleted": false}]}, {"postKey": "d5", "title": "월 무항생제 계란 한판(30구)", "createdAt": "2026-08-18T20:00:00", "createdMs": 1755946800000, "comments": [{"id": "d5-1", "author": "단골이맘", "authorKey": "m1", "comment": "1판", "createdAt": "2026-08-19T20:10:00", "status": "주문", "note": "", "deleted": false}, {"id": "d5-2", "author": "코코맘", "authorKey": "m8", "comment": "2", "createdAt": "2026-08-19T20:25:00", "status": "주문", "note": "", "deleted": false}, {"id": "d5-3", "author": "라라", "authorKey": "m6", "comment": "🔒 비밀 댓글 (수량 직접 확인)", "createdAt": "2026-08-19T20:40:00", "status": "대기", "note": "", "deleted": false}]}, {"postKey": "d6", "title": "제철 햇양파 3kg", "createdAt": "2026-08-18T15:00:00", "createdMs": 1755925200000, "comments": [{"id": "d6-1", "author": "봄날", "authorKey": "m5", "comment": "2망", "createdAt": "2026-08-19T15:10:00", "status": "주문", "note": "", "deleted": false}, {"id": "d6-2", "author": "제인", "authorKey": "m3", "comment": "1", "createdAt": "2026-08-19T15:22:00", "status": "주문", "note": "", "deleted": false}]}];
+      const COLLECTED_AT = "2026. 08. 19. 19:20";
       const BACKEND_URL = "";  // Cloudflare Worker 주소(빌드 시 주입). 없으면 새로고침으로 대체.
 
       const mockRawComments = [
         { id: 'c001', author: '김미영', authorKey: 'u001', comment: '1개 주문해요', createdAt: '2026-08-19T07:18:00', status: '주문', note: '' },
         { id: 'c002', author: '박선희', authorKey: 'u002', comment: '1/2/1 부탁드려요', createdAt: '2026-08-19T07:24:00', status: '주문', note: '한 묶음' },
-        { id: 'c003', author: '온빛', authorKey: 'admin01', comment: '감사합니다 주문 확인', createdAt: '2026-08-19T07:25:00', status: '주문', note: '' },
+        { id: 'c003', author: '샘플청과', authorKey: 'admin01', comment: '감사합니다 주문 확인', createdAt: '2026-08-19T07:25:00', status: '주문', note: '' },
         { id: 'c004', author: '이수지', authorKey: 'u004', comment: '2개요!', createdAt: '2026-08-19T07:31:00', status: '수령', note: '오후 방문' },
         { id: 'c005', author: '최지경', authorKey: 'u005', comment: '1/한개 더/1', createdAt: '2026-08-19T07:43:00', status: '대기', note: '' },
         { id: 'c006', author: '정하늘', authorKey: 'u006', comment: '3개 주문할게요', createdAt: '2026-08-19T08:02:00', status: '주문', note: '', deleted: true },
         { id: 'c007', author: '오지윤', authorKey: 'u007', comment: '1개 부탁드려요', createdAt: '2026-08-19T08:11:00', status: '취소', note: '고객 요청' },
-        { id: 'c008', author: '온빛_관리자', authorKey: 'admin02', comment: '네, 확인했습니다 감사합니다', createdAt: '2026-08-19T08:12:00', status: '주문', note: '' },
+        { id: 'c008', author: '샘플청과_관리자', authorKey: 'admin02', comment: '네, 확인했습니다 감사합니다', createdAt: '2026-08-19T08:12:00', status: '주문', note: '' },
         { id: 'c009', author: '한소라', authorKey: 'u009', comment: '2/1 주세요', createdAt: '2026-08-19T08:27:00', status: '대기', note: '' },
         { id: 'c010', author: '오정미', authorKey: 'u010', comment: '1개요', createdAt: '2026-08-19T09:05:00', status: '수령', note: '보냉백' },
         { id: 'c011', author: '강나래', authorKey: 'u011', comment: '2개 예약합니다', createdAt: '2026-08-18T18:42:00', status: '주문', note: '' },
-        { id: 'c012', author: '온빛', authorKey: 'admin01', comment: '주문 확인했습니다 :)', createdAt: '2026-08-18T18:44:00', status: '주문', note: '' },
+        { id: 'c012', author: '샘플청과', authorKey: 'admin01', comment: '주문 확인했습니다 :)', createdAt: '2026-08-18T18:44:00', status: '주문', note: '' },
         { id: 'c013', author: '송유진', authorKey: 'u013', comment: '1/1/2 주문', createdAt: '2026-08-02T11:16:00', status: '수령', note: '' },
         { id: 'c014', author: '조현주', authorKey: 'u014', comment: '2개 부탁합니다', createdAt: '2026-07-28T16:33:00', status: '수령', note: '', deleted: true },
         { id: 'c015', author: '배유나', authorKey: 'u015', comment: '1개 주문', createdAt: '2026-05-28T10:09:00', status: '취소', note: '재고 소진' }
@@ -434,11 +444,43 @@
 
       let selectedPostIndex = -2;  // 기본: 게시글 목록(글 누르면 그 글 주문만) / -1=전체 주문 / >=0=개별글
       let postListSearch = '';
+      let postListDate = '';   // 날짜별 보기 필터('' = 전체). 최종 수령일 기준으로 그 날 찾아갈 공구만 표시.
+      const WEEKDAY = ['일', '월', '화', '수', '목', '금', '토'];
+      const WMAP = { '일': 0, '월': 1, '화': 2, '수': 3, '목': 4, '금': 5, '토': 6 };
+      const NO_DATE = '__none__';
+      function _today() { const t = new Date(); t.setHours(0, 0, 0, 0); return t; }
+      // 오늘(포함) 이후 가장 가까운 해당 요일 날짜
+      function nextWeekdayDate(dow) { const t = _today(); const d = new Date(t); d.setDate(t.getDate() + ((dow - t.getDay() + 7) % 7)); return d; }
+      // 오늘(포함) 이후 가장 가까운 해당 '일(day-of-month)' 날짜
+      function nextMonthDay(dom) { const t = _today(); let d = new Date(t.getFullYear(), t.getMonth(), dom); if (d < t) d = new Date(t.getFullYear(), t.getMonth() + 1, dom); return d; }
+      // 제목에서 최종 수령일 추출(사장님이 제목에 지정: 8/22 · 22일 · 금 · 금요일). 없으면 null.
+      function pickupDate(p) {
+        const t = String(displayTitle(p) || '');
+        let m;
+        if ((m = t.match(/(?<!\d)(\d{1,2})\s*[\/.\-]\s*(\d{1,2})(?!\d)/))) {
+          const mo = +m[1], dy = +m[2];
+          if (mo >= 1 && mo <= 12 && dy >= 1 && dy <= 31) return new Date(_today().getFullYear(), mo - 1, dy);
+        }
+        if ((m = t.match(/(?<!\d)(\d{1,2})\s*일/))) { const dom = +m[1]; if (dom >= 1 && dom <= 31) return nextMonthDay(dom); }
+        if ((m = t.match(/([월화수목금토일])\s*요일/)) || (m = t.match(/(?<![가-힣])([월화수목금토일])(?![가-힣])/))) return nextWeekdayDate(WMAP[m[1]]);
+        return null;
+      }
+      // 그룹 키(M/D) — 수령일 기준. 미지정은 NO_DATE.
+      function postDateKey(p) { const d = pickupDate(p); return d ? `${d.getMonth() + 1}/${d.getDate()}` : NO_DATE; }
+      // 칩 라벨: "8/22 (금요일)" / 미지정은 "날짜미지정".
+      function postDateLabel(p) { const d = pickupDate(p); return d ? `${d.getMonth() + 1}/${d.getDate()} (${WEEKDAY[d.getDay()]}요일)` : '날짜미지정'; }
+      function postDateMs(p) { const d = pickupDate(p); return d ? d.getTime() : Infinity; }  // 정렬용(미지정 맨 뒤)
       let state = { ...loadGlobalState(), edits: {} };
       let saveTimer;
       const checkedIds = new Set();  // 일괄처리용 체크 선택(세션 유지)
       let statusFilter = 'all';      // 상태 빠른 필터(전체/미수령/수령/취소)
       let textMode = false;          // 줄글(텍스트 목록) 보기
+      let pickSeq = 0;               // 수령 처리 순서(수령 누른 순서대로 밑으로 깔기)
+      function markStatus(id, status) {
+        const e = getEdit(id);
+        const pickedAt = status === '수령' ? (e.pickedAt || (Date.now() * 1000 + (++pickSeq))) : 0;
+        state.edits[id] = { qty: e.qty, status, note: e.note, pickedAt };
+      }
 
       function localDateString(date) {
         const year = date.getFullYear();
@@ -524,6 +566,14 @@
         return Number.isFinite(total) ? Math.max(0, Math.floor(total)) : 0;
       }
 
+      // 한글 수사 → 숫자(한개=1, 두봉=2 … 열=10). 단독·명확할 때만 변환하고, 애매하면 변환하지 않음.
+      const KNUM = { '하나': 1, '한': 1, '둘': 2, '두': 2, '셋': 3, '세': 3, '넷': 4, '네': 4, '다섯': 5, '여섯': 6, '일곱': 7, '여덟': 8, '아홉': 9, '열': 10 };
+      function koreanToDigit(piece) {
+        // [수사][단위?][맺음말?] 단독 형태만 확정 변환. '한두개','몇개','한 개 더' 등은 null(→ 빨강 유지).
+        const m = piece.match(/^(하나|한|둘|두|셋|세|넷|네|다섯|여섯|일곱|여덟|아홉|열)\s*(개|통|근|박스|판|봉지|봉|키로|킬로|kg|수)?\s*(요|이요|입니다|주세요|부탁드려요|예약합니다|추가|더요)?\s*[~!?.。·,，]*$/i);
+        if (!m) return null;
+        return KNUM[m[1]] ?? null;
+      }
       function recognizeQuantity(text) {
         // 슬래시별 숫자 합산은 유지하되, 실제 주문에서 확인한 짧은 형식만 자동 확정한다.
         const pieces = plainCommentText(text).split('/').map(value => value.trim());
@@ -532,8 +582,11 @@
         let quantity = 0;
         let flagged = pieces.length === 0;
         pieces.forEach(piece => {
+          if (!piece) { flagged = true; return; }
+          const kd = koreanToDigit(piece);
+          if (kd != null) { quantity += kd; return; }  // 한글 수사 확정 → 합산(빨강 아님)
           const matches = piece.match(/\d+/g) || [];
-          if (!piece || matches.length !== 1 || koreanNumberWord.test(piece) || !acceptedPiece.test(piece)) flagged = true;
+          if (matches.length !== 1 || koreanNumberWord.test(piece) || !acceptedPiece.test(piece)) flagged = true;
           if (matches.length === 1) {
             const amount = Number(matches[0]);
             if (Number.isSafeInteger(amount) && amount > 0) quantity += amount;
@@ -627,9 +680,24 @@
         };
       }
 
+      // 수령(찾아간) 건은 누른 순서대로 맨 밑으로 깔고, 미수령(주문·대기)은 위에 남긴다. 취소는 맨 아래.
+      function sortForDisplay(rows) {
+        return rows
+          .map((c, i) => [c, i])
+          .sort((a, b) => {
+            const ea = getEdit(a[0].id), eb = getEdit(b[0].id);
+            const rank = st => st === '수령' ? 1 : st === '취소' ? 2 : 0;
+            const ra = rank(ea.status), rb = rank(eb.status);
+            if (ra !== rb) return ra - rb;
+            if (ra === 1) { const d = (ea.pickedAt || 0) - (eb.pickedAt || 0); if (d) return d; }
+            return a[1] - b[1];  // 그룹 내 원래 순서 유지(안정 정렬)
+          })
+          .map(x => x[0]);
+      }
+
       function filteredComments() {
         const needle = state.search.trim().toLocaleLowerCase('ko');
-        return rawComments().filter(comment => {
+        return sortForDisplay(rawComments().filter(comment => {
           if (isAfterClose(comment)) return false;  // 마감 후 달린 댓글 제외
           const commentDate = dateOnly(comment.createdAt);
           if (commentDate < state.dateFrom || commentDate > state.dateTo) return false;
@@ -642,7 +710,7 @@
           }
           const haystack = `${comment.author || ''} ${comment.comment || ''} ${comment._post || ''} ${edit.note}`.toLocaleLowerCase('ko');
           return !needle || haystack.includes(needle);
-        });
+        }));
       }
 
       function orderComments(rows = filteredComments()) { return rows.filter(comment => !isAdmin(comment)); }
@@ -686,7 +754,7 @@
           ? `게시글 ${posts.length}개 · 보고 싶은 상품 글을 눌러 보세요`
           : selectedPostIndex < 0
           ? `모든 게시글 ${posts.length}개 · 수집된 댓글 ${rawComments().length}개 · 기간으로 좁혀 보세요`
-          : `밴드 · 수집된 댓글 ${rawComments().length}개`;
+          : `샘플청과 · 수집된 댓글 ${rawComments().length}개`;
         // 마감 버튼: 개별 게시글을 볼 때만 표시(전체 보기에선 숨김).
         const btn = el('closeBtn'), note = el('closeNote');
         if (selectedPostIndex < 0) {
@@ -726,18 +794,35 @@
       }
 
       function setListMode(on) {
-        const ps = el('postListSection'), sb = el('statbarSection'), op = el('orderPanel');
+        const ps = el('postListSection'), op = el('orderPanel');
         if (ps) ps.hidden = !on;
-        if (sb) sb.hidden = on;
         if (op) op.hidden = on;
+        // 요약(statbar)은 목록에서도 표시 — 대신 전체 합계를 보여준다(0으로 오해 방지).
       }
 
       function renderPostList() {
         setListMode(true);
         const needle = postListSearch.trim().toLocaleLowerCase('ko');
+        // 날짜별 보기: 최종 수령일 기준 그룹핑(제목에 지정한 수령일). 칩 라벨 "8/22 (금요일)", 가까운 수령일 먼저.
+        const tagInfo = new Map();  // key(M/D 또는 NO_DATE) -> {count, ms, label}
+        posts.forEach(p => {
+          const k = postDateKey(p);
+          const cur = tagInfo.get(k) || { count: 0, ms: postDateMs(p), label: postDateLabel(p) };
+          cur.count++;
+          tagInfo.set(k, cur);
+        });
+        if (tagInfo.size) {
+          const keys = Array.from(tagInfo.keys()).sort((a, b) => tagInfo.get(a).ms - tagInfo.get(b).ms);
+          const chips = [`<button class="pls-datechip${postListDate === '' ? ' on' : ''}" data-date="">전체</button>`]
+            .concat(keys.map(k =>
+              `<button class="pls-datechip${postListDate === k ? ' on' : ''}" data-date="${escapeHtml(k)}">${escapeHtml(tagInfo.get(k).label)} <b>${tagInfo.get(k).count}</b></button>`));
+          el('postListDates').innerHTML = chips.join('');
+          el('postListDates').hidden = false;
+        } else { el('postListDates').innerHTML = ''; el('postListDates').hidden = true; }
         // 최근 글부터. 각 글의 주문/미수령 수 계산(마감 반영).
         const rowsHtml = posts.map((p, i) => ({ p, i }))
           .filter(({ p }) => {
+            if (postListDate && postDateKey(p) !== postListDate) return false;
             if (!needle) return true;
             return `${displayTitle(p)} ${p.title || ''}`.toLocaleLowerCase('ko').includes(needle);
           })
@@ -758,7 +843,9 @@
             return `<div class="pls-row" data-postidx="${i}">
               <span class="pls-title">${escapeHtml(displayTitle(p))}</span>
               <span class="pls-date">${escapeHtml(formatPostDate(p.createdAt))}</span>
-              <span class="pls-badge o">주문 ${orders}</span>${nb}${closed}
+              <span class="pls-slot o"><span class="pls-badge o">주문 ${orders}</span></span>
+              <span class="pls-slot n">${nb}</span>
+              <span class="pls-slot c">${closed}</span>
               <button class="pls-edit" data-editpost="${i}" title="제목 바꾸기(물품 찾기 편하게)">✏️</button>
             </div>`;
           }).join('');
@@ -767,7 +854,13 @@
 
       function render() {
         updatePostBanner();
-        if (selectedPostIndex === -2) { renderPostList(); return; }
+        if (selectedPostIndex === -2) {
+          // 목록 화면: 하단 요약에 전체 게시글 합계를 표시(0으로 오해 방지).
+          const allRows = [...allPost().comments, ...manualRows(null)].filter(c => !isAfterClose(c));
+          updateSummary(allRows);
+          renderPostList();
+          return;
+        }
         setListMode(false);
         const rows = filteredComments();
         const { totalQty } = updateSummary(rows);
@@ -941,7 +1034,7 @@
       el('orderRows').addEventListener('change', event => {
         const target = event.target;
         if (target.dataset.action !== 'status' || !state.edits[target.dataset.id]) return;
-        state.edits[target.dataset.id].status = target.value;
+        markStatus(target.dataset.id, target.value);
         persistEdits();
         render();
       });
@@ -1033,8 +1126,7 @@
         const how = useChecked ? `체크한 ${targets.length}건` : `체크 뺀 나머지 ${targets.length}건`;
         if (!confirm(`${how}을 모두 '${status}'(으)로 바꿀까요?`)) return;
         targets.forEach(comment => {
-          const edit = getEdit(comment.id);
-          state.edits[comment.id] = { ...edit, status };
+          markStatus(comment.id, status);
         });
         if (useChecked) targets.forEach(c => checkedIds.delete(c.id));  // 처리한 건 체크 해제
         persistEdits();
@@ -1086,6 +1178,11 @@
         render();
       });
       el('postListSearch').addEventListener('input', event => { postListSearch = event.target.value; renderPostList(); });
+      el('postListDates').addEventListener('click', event => {
+        const b = event.target.closest('.pls-datechip'); if (!b) return;
+        postListDate = b.dataset.date || '';
+        renderPostList();
+      });
       el('backListBtn').addEventListener('click', () => {
         persistEdits(false);
         selectedPostIndex = -2; checkedIds.clear();
