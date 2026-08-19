@@ -114,6 +114,10 @@
     .secondary-btn { padding: 7px 10px; font-size: 12px; }
     .secondary-btn:hover { color: var(--text); border-color: var(--line-strong); background: #fff; }
     .table-scroll { width: 100%; max-width: 100%; overflow-x: auto; border-top: 1px solid var(--line); -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+    .text-view { border-top: 1px solid var(--line); }
+    .text-view-bar { display: flex; justify-content: space-between; align-items: center; padding: 10px 18px; gap: 12px; flex-wrap: wrap; }
+    .text-view-note { color: var(--muted); font-size: 12px; font-weight: 700; }
+    .text-list { margin: 0; padding: 4px 18px 20px; font-family: inherit; font-size: 14px; line-height: 1.8; color: var(--text); white-space: pre-wrap; word-break: break-word; }
     table { width: 100%; min-width: 1040px; border-collapse: collapse; table-layout: fixed; }
     th { padding: 10px 12px; color: var(--faint); background: var(--surface-2); border-bottom: 1px solid var(--line); text-align: left; font-size: 11px; font-weight: 800; letter-spacing: .02em; }
     td { padding: 11px 12px; border-bottom: 1px solid #e9efec; vertical-align: middle; }
@@ -305,6 +309,7 @@
             <button id="bulkCheckedBtn" class="secondary-btn primary-btn" type="button" title="체크한 주문만 위 상태로">✔ 체크한 것</button>
             <button id="bulkOthersBtn" class="secondary-btn" type="button" title="체크한 것을 빼고 나머지 전체를 위 상태로">체크 뺀 나머지</button>
           </span>
+          <button id="textToggleBtn" class="secondary-btn" type="button" title="표 대신 줄글(텍스트) 목록으로 보기">📝 줄글로 보기</button>
           <button id="addOrderBtn" class="secondary-btn" type="button">➕ 주문 직접추가</button>
           <button id="pasteBtn" class="secondary-btn" type="button">📋 밴드댓글 붙여넣기</button>
           <button id="printBtn" class="secondary-btn" type="button">인쇄 / 준비리스트</button>
@@ -336,7 +341,7 @@
         </div>
       </div>
 
-      <div class="table-scroll">
+      <div class="table-scroll" id="tableScroll">
         <table>
           <thead><tr>
             <th class="col-check"><input type="checkbox" id="checkAll" aria-label="전체 선택"></th>
@@ -346,6 +351,10 @@
           <tbody id="orderRows"></tbody>
           <tfoot id="tableFoot"></tfoot>
         </table>
+      </div>
+      <div id="textView" class="text-view" hidden>
+        <div class="text-view-bar"><span id="textViewNote" class="text-view-note"></span><button id="textCopyBtn" class="secondary-btn" type="button">📋 전체 복사</button></div>
+        <pre id="textList" class="text-list"></pre>
       </div>
     </section>
     <p id="dataNote" class="demo-note"></p>
@@ -359,7 +368,7 @@
 
       // 빌드 시 주석 뒤의 빈 배열만 실제 게시글 JSON 배열로 교체합니다.
       const POSTS_DATA = /*__POSTS_DATA__*/ [{"postKey": "demo-1", "title": "🍎 부사사과 5kg 공구", "createdAt": "2026-08-19T08:00:00", "comments": [{"id": "d1-1", "author": "단골이맘", "authorKey": "m1", "comment": "2박스요", "createdAt": "2026-08-19T08:05:00", "status": "주문", "note": "", "deleted": false}, {"id": "d1-2", "author": "행복한하루", "authorKey": "m2", "comment": "1", "createdAt": "2026-08-19T08:07:00", "status": "주문", "note": "", "deleted": false}, {"id": "d1-3", "author": "제인", "authorKey": "m3", "comment": "1/1", "createdAt": "2026-08-19T08:11:00", "status": "주문", "note": "", "deleted": false}, {"id": "d1-4", "author": "미소천사", "authorKey": "m4", "comment": "세 박스요", "createdAt": "2026-08-19T08:20:00", "status": "주문", "note": "", "deleted": false}, {"id": "d1-5", "author": "봄날", "authorKey": "m5", "comment": "2봉", "createdAt": "2026-08-19T08:31:00", "status": "수령", "note": "", "deleted": false}]}, {"postKey": "demo-2", "title": "🍑 딱복 천도복숭아", "createdAt": "2026-08-19T07:00:00", "comments": [{"id": "d2-1", "author": "라라", "authorKey": "m6", "comment": "1봉지요", "createdAt": "2026-08-19T07:10:00", "status": "주문", "note": "", "deleted": false}, {"id": "d2-2", "author": "단골이맘", "authorKey": "m1", "comment": "2", "createdAt": "2026-08-19T07:15:00", "status": "주문", "note": "", "deleted": false}, {"id": "d2-3", "author": "하늘색", "authorKey": "m7", "comment": "한개요", "createdAt": "2026-08-19T07:22:00", "status": "주문", "note": "", "deleted": false}, {"id": "d2-4", "author": "코코맘", "authorKey": "m8", "comment": "3봉", "createdAt": "2026-08-19T07:41:00", "status": "주문", "note": "", "deleted": false}]}, {"postKey": "demo-3", "title": "🥬 유기농 애호박·오이 묶음", "createdAt": "2026-08-18T18:00:00", "comments": [{"id": "d3-1", "author": "제인", "authorKey": "m3", "comment": "애호박 2 오이 1", "createdAt": "2026-08-18T18:05:00", "status": "주문", "note": "", "deleted": false}, {"id": "d3-2", "author": "봄날", "authorKey": "m5", "comment": "1", "createdAt": "2026-08-18T18:19:00", "status": "주문", "note": "", "deleted": false}, {"id": "d3-3", "author": "라라", "authorKey": "m6", "comment": "2", "createdAt": "2026-08-18T18:33:00", "status": "취소", "note": "고객요청", "deleted": true}]}];
-      const COLLECTED_AT = "2026. 08. 19. 16:39";
+      const COLLECTED_AT = "2026. 08. 19. 17:01";
       const BACKEND_URL = "";  // Cloudflare Worker 주소(빌드 시 주입). 없으면 새로고침으로 대체.
 
       const mockRawComments = [
@@ -401,6 +410,7 @@
       let saveTimer;
       const checkedIds = new Set();  // 일괄처리용 체크 선택(세션 유지)
       let statusFilter = 'all';      // 상태 빠른 필터(전체/미수령/수령/취소)
+      let textMode = false;          // 줄글(텍스트 목록) 보기
 
       function localDateString(date) {
         const year = date.getFullYear();
@@ -649,6 +659,23 @@
           ? `<tr><td colspan="4" class="total-label">현재 조회 결과 총 합계</td><td class="grand-total num">${totalQty}개</td><td colspan="3" style="color:var(--muted);font-size:11px">수량 수정 시 즉시 반영됩니다.</td></tr>`
           : '<tr><td colspan="8" class="empty">고객 주문이 아직 없습니다. 새 주문 댓글이 수집되면 여기에 표시됩니다.</td></tr>';
         if (typeof syncCheckAll === 'function') syncCheckAll();
+        if (typeof buildTextList === 'function') buildTextList(rows);
+      }
+
+      // 줄글(텍스트 목록) 생성 — 표 대신 한 줄씩 텍스트로. 복사해서 쓰기 좋게.
+      function buildTextList(rows = filteredComments()) {
+        const orders = orderComments(rows);
+        const lines = orders.map((c, i) => {
+          const e = getEdit(c.id);
+          const prod = c._post ? `${c._post} · ` : '';
+          const note = e.note ? ` · ${e.note}` : '';
+          const del = c.deleted ? ' · (원본삭제)' : '';
+          return `${i + 1}. ${c.author || '이름없음'} · ${prod}${safeQuantity(e.qty)}개 · ${e.status}${note}${del}`;
+        });
+        const totalQty = orders.reduce((s, c) => s + safeQuantity(getEdit(c.id).qty), 0);
+        const header = `[${selectedPost().title || '주문 목록'}]  총 ${orders.length}건 · 수량 ${totalQty}개\n`;
+        el('textList').textContent = orders.length ? header + '\n' + lines.join('\n') : '조건에 맞는 주문이 없습니다.';
+        el('textViewNote').textContent = `줄글 목록 · ${orders.length}건`;
       }
 
       function setPreset(button) {
@@ -868,6 +895,25 @@
         document.querySelectorAll('.sfilter').forEach(b => b.classList.toggle('active', b === btn));
         render();
       }));
+
+      // 줄글(텍스트) 보기 토글 + 복사
+      el('textToggleBtn').addEventListener('click', () => {
+        textMode = !textMode;
+        el('tableScroll').hidden = textMode;
+        el('textView').hidden = !textMode;
+        el('textToggleBtn').textContent = textMode ? '📊 표로 보기' : '📝 줄글로 보기';
+        render();
+      });
+      el('textCopyBtn').addEventListener('click', async () => {
+        const t = el('textList').textContent;
+        try {
+          await navigator.clipboard.writeText(t);
+          const b = el('textCopyBtn'); b.textContent = '✓ 복사됨'; setTimeout(() => b.textContent = '📋 전체 복사', 1500);
+        } catch (_) {
+          const r = document.createRange(); r.selectNodeContents(el('textList'));
+          const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+        }
+      });
 
       // 연동(수동 새로고침): 백엔드가 연결돼 있으면 밴드에서 즉시 최신 댓글을 불러오고, 없으면 페이지 새로고침.
       el('syncBtn').addEventListener('click', async () => {
