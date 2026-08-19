@@ -1,0 +1,956 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>BAND 주문 대시보드 (데모)</title>
+  <style>
+    :root {
+      --bg: #f4f7f6; --surface: #ffffff; --surface-2: #f8faf9; --line: #dfe8e4;
+      --line-strong: #ccd9d4; --text: #17211e; --muted: #687772; --faint: #8b9994;
+      --green: #16876b; --green-dark: #0f6e57; --green-soft: #e6f4ef;
+      --blue: #3478c7; --blue-soft: #eaf2fb; --amber: #aa6b10; --amber-soft: #fff4df;
+      --red: #c6453b; --red-soft: #fff0ee; --purple: #7758b6; --purple-soft: #f1edfa;
+      --shadow: 0 1px 2px rgba(19, 43, 35, .04), 0 10px 30px rgba(19, 43, 35, .055);
+      --radius: 14px;
+    }
+    * { box-sizing: border-box; }
+    html { min-width: 320px; }
+    body { margin: 0; color: var(--text); background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    button, input, select { font: inherit; }
+    button, select { cursor: pointer; }
+    button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid rgba(22, 135, 107, .18); outline-offset: 1px; }
+    .num { font-variant-numeric: tabular-nums; }
+    .app { max-width: 1500px; margin: 0 auto; padding: 28px 28px 52px; }
+
+    .topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 22px; }
+    .brand { display: flex; gap: 13px; align-items: center; }
+    .brand-mark { width: 43px; height: 43px; border-radius: 13px; display: grid; place-items: center; background: linear-gradient(145deg, #22aa86, #11745d); color: white; font-size: 19px; font-weight: 900; box-shadow: 0 7px 18px rgba(22, 135, 107, .22); }
+    h1 { margin: 0; font-size: 21px; line-height: 1.25; letter-spacing: -.025em; }
+    .subtitle { margin-top: 5px; color: var(--muted); font-size: 12.5px; }
+    .sync-wrap { display: flex; align-items: center; gap: 8px; }
+    .sync-btn { padding: 9px 14px; border: 1px solid var(--green); border-radius: 10px; background: var(--green); color: #fff; font-weight: 800; font-size: 13px; cursor: pointer; white-space: nowrap; box-shadow: var(--shadow); }
+    .sync-btn:hover { background: var(--green-dark); }
+    .sync-btn:disabled { opacity: .6; cursor: default; }
+    .sync-box { display: flex; gap: 9px; align-items: center; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--muted); font-size: 12px; box-shadow: var(--shadow); }
+    .sync-dot { width: 8px; height: 8px; flex: none; border-radius: 50%; background: #25a579; box-shadow: 0 0 0 4px var(--green-soft); }
+
+    .post-banner { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 16px; padding: 17px 19px; border: 1px solid #cfe3dc; border-radius: var(--radius); background: linear-gradient(105deg, #f1faf7 0%, #fff 72%); box-shadow: var(--shadow); }
+    .post-copy { min-width: 0; flex: 1; }
+    .eyebrow { margin-bottom: 3px; color: var(--green-dark); font-weight: 800; font-size: 11px; letter-spacing: .08em; }
+    .post-title { font-size: 17px; font-weight: 800; letter-spacing: -.015em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .post-meta { margin-top: 4px; color: var(--muted); font-size: 12px; }
+    .post-picker { width: min(360px, 36vw); flex: none; }
+    .post-picker label { display: block; margin-bottom: 6px; color: var(--muted); font-size: 11px; font-weight: 800; }
+    .post-picker-line { display: flex; align-items: center; gap: 9px; }
+    .post-picker .control { min-width: 0; }
+    .mock-badge { flex: none; padding: 6px 10px; border-radius: 999px; color: var(--green-dark); background: var(--green-soft); font-size: 11px; font-weight: 800; white-space: nowrap; }
+
+    /* 한눈에 보이는 컴팩트 요약 스트립 (기존 프로그램처럼 조밀하게) */
+    .statbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .stat { display: flex; align-items: baseline; gap: 6px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); box-shadow: var(--shadow); }
+    .stat-num { font-size: 21px; line-height: 1; font-weight: 850; letter-spacing: -.02em; }
+    .stat-cap { font-size: 12px; font-weight: 750; color: var(--muted); }
+    .stat.main { border-color: #bfe0d3; background: var(--green-soft); }
+    .stat.main .stat-num { color: var(--green-dark); }
+    .stat.s-order .stat-num { color: var(--blue); }
+    .stat.s-pickup .stat-num { color: var(--green-dark); }
+    .stat.s-wait .stat-num { color: var(--amber); }
+    .stat.s-cancel .stat-num { color: var(--red); }
+    .post-pill { display: inline-block; margin-right: 6px; padding: 2px 8px; border-radius: 6px; background: var(--green-soft); color: var(--green-dark); font-size: 11px; font-weight: 850; border: 1px solid #bfe0d3; vertical-align: 1px; white-space: nowrap; }
+
+    .panel { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
+    .filters { display: grid; grid-template-columns: minmax(190px, .85fr) minmax(360px, 1.65fr) minmax(190px, 1fr) auto; gap: 14px; align-items: end; padding: 17px 18px; border-bottom: 1px solid var(--line); }
+    .field label, .field-label { display: block; margin-bottom: 7px; color: var(--muted); font-size: 11px; font-weight: 800; }
+    .control { width: 100%; height: 39px; padding: 0 11px; color: var(--text); border: 1px solid var(--line-strong); border-radius: 9px; background: #fff; transition: border .15s, box-shadow .15s; }
+    .control:hover { border-color: #9db5ac; }
+    .date-line { display: grid; grid-template-columns: 1fr 15px 1fr; gap: 7px; align-items: center; }
+    .date-sep { color: var(--faint); text-align: center; }
+    .presets { display: flex; gap: 5px; margin-top: 7px; flex-wrap: wrap; }
+    .preset, .secondary-btn { border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); color: var(--muted); font-weight: 700; }
+    .preset { padding: 4px 8px; font-size: 11px; }
+    .preset:hover, .preset.active { color: var(--green-dark); border-color: #9fcabd; background: var(--green-soft); }
+    .toggle-wrap { display: flex; height: 39px; align-items: center; gap: 9px; white-space: nowrap; color: var(--muted); font-size: 12px; font-weight: 700; }
+    .switch { position: relative; width: 38px; height: 22px; flex: none; }
+    .switch input { position: absolute; opacity: 0; pointer-events: none; }
+    .slider { position: absolute; inset: 0; border-radius: 999px; background: #cbd5d1; transition: .2s; }
+    .slider::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: white; box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: .2s; }
+    .switch input:checked + .slider { background: var(--green); }
+    .switch input:checked + .slider::after { transform: translateX(16px); }
+
+    .table-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 15px 18px; }
+    .table-head h2 { margin: 0; font-size: 15px; }
+    .result-note { margin-top: 3px; color: var(--muted); font-size: 11.5px; }
+    .actions { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
+    .bulk-group { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px 4px 10px; border: 1px solid #bfe0d3; border-radius: 9px; background: var(--green-soft); }
+    .bulk-label { color: var(--green-dark); font-size: 11px; font-weight: 800; white-space: nowrap; }
+    .bulk-group .control { height: 30px; width: auto; padding: 0 8px; font-weight: 700; }
+    .primary-btn { color: #fff !important; background: var(--green) !important; border-color: var(--green) !important; }
+    .primary-btn:hover { background: var(--green-dark) !important; }
+    .add-form { margin: 0 18px 14px; padding: 14px 16px; border: 1px solid #bfe0d3; border-radius: 12px; background: var(--green-soft); }
+    .add-title { font-weight: 850; color: var(--green-dark); margin-bottom: 10px; font-size: 13px; }
+    .add-hint { font-weight: 600; color: var(--muted); font-size: 11px; margin-left: 6px; }
+    .add-grid { display: grid; grid-template-columns: 1.3fr 1.7fr .6fr .8fr 1.3fr auto; gap: 10px; align-items: end; }
+    .add-grid label { display: flex; flex-direction: column; gap: 5px; font-size: 11px; font-weight: 800; color: var(--muted); }
+    .add-grid .control { height: 36px; }
+    .add-actions { display: flex; gap: 6px; }
+    .manual-tag { margin-left: 6px; padding: 2px 6px; border-radius: 5px; color: #7b5aaa; background: #efeafa; font-size: 10px; font-weight: 800; }
+    .del-manual { margin-left: 8px; padding: 1px 6px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--red); font-size: 11px; font-weight: 800; cursor: pointer; }
+    @media (max-width: 900px) { .add-grid { grid-template-columns: 1fr 1fr; } }
+    .paste-grid { display: grid; grid-template-columns: 260px 1fr auto; gap: 12px; align-items: start; }
+    .paste-grid label { display: flex; flex-direction: column; gap: 5px; font-size: 11px; font-weight: 800; color: var(--muted); }
+    .paste-area { height: auto; min-height: 100px; padding: 8px 10px; font-family: inherit; font-size: 13px; resize: vertical; line-height: 1.5; }
+    @media (max-width: 900px) { .paste-grid { grid-template-columns: 1fr; } }
+    .secondary-btn { padding: 7px 10px; font-size: 12px; }
+    .secondary-btn:hover { color: var(--text); border-color: var(--line-strong); background: #fff; }
+    .table-scroll { width: 100%; max-width: 100%; overflow-x: auto; border-top: 1px solid var(--line); -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+    table { width: 100%; min-width: 1040px; border-collapse: collapse; table-layout: fixed; }
+    th { padding: 10px 12px; color: var(--faint); background: var(--surface-2); border-bottom: 1px solid var(--line); text-align: left; font-size: 11px; font-weight: 800; letter-spacing: .02em; }
+    td { padding: 11px 12px; border-bottom: 1px solid #e9efec; vertical-align: middle; }
+    tbody tr:hover { background: #fafcfb; }
+    tbody tr.flagged { background: #fff8f7; box-shadow: inset 3px 0 0 var(--red); }
+    tbody tr.flagged:hover { background: #fff3f1; }
+    tbody tr.admin-row { background: #fafafa; color: var(--faint); }
+    .col-check { width: 40px; text-align: center; }
+    .row-check, #checkAll { width: 17px; height: 17px; cursor: pointer; accent-color: var(--green); }
+    .col-seq { width: 54px; text-align: center; }
+    .col-author { width: 160px; }
+    .col-comment { width: 310px; }
+    .col-qty { width: 125px; }
+    .col-status { width: 130px; }
+    .col-date { width: 130px; }
+    .author { display: flex; align-items: center; gap: 9px; min-width: 0; }
+    .avatar { width: 30px; height: 30px; flex: none; display: grid; place-items: center; border-radius: 10px; color: white; font-size: 12px; font-weight: 850; }
+    .author-name { min-width: 0; font-weight: 750; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .admin-tag { margin-left: 5px; padding: 2px 5px; border-radius: 5px; color: #6c7580; background: #e9edef; font-size: 9px; vertical-align: 1px; }
+    .comment { word-break: keep-all; }
+    .deleted-tag, .warning-tag { display: inline-flex; align-items: center; padding: 2px 6px; border-radius: 6px; font-size: 10px; font-weight: 800; }
+    .deleted-tag { margin-left: 6px; color: var(--red); background: var(--red-soft); }
+    .warning-tag { margin-top: 5px; color: var(--red); background: var(--red-soft); }
+    .qty-input { width: 68px; height: 34px; padding: 0 8px; border: 1px solid var(--line-strong); border-radius: 8px; text-align: right; font-weight: 800; background: white; }
+    .flagged .qty-input { color: var(--red); border-color: #e8a7a1; background: white; }
+    .status-select, .note-input { height: 34px; border: 1px solid var(--line-strong); border-radius: 8px; background: white; color: var(--text); }
+    .status-select { width: 100%; padding: 0 8px; font-weight: 700; }
+    .status-select[data-status="주문"] { color: var(--blue); background: var(--blue-soft); border-color: #c5d9ee; }
+    .status-select[data-status="수령"] { color: var(--green-dark); background: var(--green-soft); border-color: #bbdccf; }
+    .status-select[data-status="대기"] { color: var(--amber); background: var(--amber-soft); border-color: #ead1a8; }
+    .status-select[data-status="취소"] { color: var(--red); background: var(--red-soft); border-color: #ecc4c0; }
+    .note-input { width: 100%; min-width: 125px; padding: 0 9px; }
+    .date-cell { color: var(--muted); font-size: 12px; white-space: nowrap; }
+    .empty { padding: 55px 20px; color: var(--muted); text-align: center; }
+    tfoot td { padding: 14px 12px; border-bottom: 0; background: #f2f8f6; font-weight: 800; }
+    .total-label { text-align: right; color: var(--muted); }
+    .grand-total { color: var(--green-dark); font-size: 19px; }
+    .saved-hint { display: inline-block; min-width: 78px; margin-left: 7px; color: var(--green); font-size: 10px; font-weight: 700; opacity: 0; transition: opacity .2s; }
+    .saved-hint.show { opacity: 1; }
+    .demo-note { margin: 13px 2px 0; color: var(--faint); font-size: 11.5px; }
+    .print-sheet { display: none; }
+
+    @media (max-width: 1120px) { .cards { grid-template-columns: repeat(3, 1fr); } .filters { grid-template-columns: 1fr 1.5fr; } }
+    @media (max-width: 700px) {
+      .app { padding: 18px 14px 40px; }
+      .topbar, .post-banner, .table-head { align-items: flex-start; flex-direction: column; }
+      .sync-box { align-self: stretch; }
+      .post-picker { width: 100%; }
+      .cards { grid-template-columns: repeat(2, 1fr); }
+      .card { min-height: 94px; }
+      .filters { grid-template-columns: 1fr; }
+      .actions { width: 100%; }
+      .actions button { flex: 1; }
+    }
+    @media (max-width: 430px) {
+      .app { padding: 14px 10px 32px; }
+      .brand { align-items: flex-start; }
+      .brand-mark { width: 38px; height: 38px; border-radius: 11px; }
+      h1 { font-size: 18px; }
+      .post-banner { padding: 14px; }
+      .post-picker-line { align-items: stretch; flex-direction: column; }
+      .mock-badge { align-self: flex-start; }
+      .cards { gap: 8px; }
+      .card { min-height: 86px; padding: 12px; }
+      .card-value { font-size: 23px; }
+      .filters { gap: 12px; padding: 14px; }
+      .date-line { grid-template-columns: minmax(0, 1fr) 11px minmax(0, 1fr); gap: 4px; }
+      .date-line .control { padding: 0 6px; font-size: 12px; }
+      .table-head { padding: 14px; }
+      .actions { flex-direction: column; }
+      .secondary-btn { min-height: 40px; }
+      table { min-width: 980px; }
+    }
+    @media print {
+      @page { size: auto; margin: 14mm; }
+      body { color: #111; background: #fff; font-size: 10pt; }
+      .app { display: none !important; }
+      .print-sheet { display: block; }
+      .print-header { margin-bottom: 8mm; padding-bottom: 5mm; border-bottom: 2px solid #222; }
+      .print-header h1 { margin: 0 0 2mm; color: #111; font-size: 18pt; }
+      .print-meta { color: #555; font-size: 9pt; }
+      .print-total { margin-top: 5mm; font-size: 17pt; font-weight: 900; }
+      .print-help { margin-top: 1mm; color: #555; font-size: 8.5pt; }
+      .print-section { margin-top: 7mm; }
+      .print-section h2 { margin: 0 0 3mm; font-size: 12pt; }
+      .print-customer-totals { display: flex; flex-wrap: wrap; gap: 2mm 4mm; margin: 0; padding: 0; list-style: none; }
+      .print-customer-totals li { min-width: 42mm; padding: 2mm 3mm; border: 1px solid #aaa; }
+      .print-customer-totals strong { float: right; }
+      .print-table { width: 100%; min-width: 0; table-layout: fixed; border-collapse: collapse; }
+      .print-table th, .print-table td { padding: 2.2mm 2mm; color: #111; border: 1px solid #aaa; background: #fff; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+      .print-table th { font-size: 8.5pt; }
+      .print-table thead { display: table-header-group; }
+      .print-table tr { break-inside: avoid; }
+      .print-table .print-col-name { width: 24%; }
+      .print-table .print-col-qty { width: 13%; text-align: right; }
+      .print-table .print-col-status { width: 16%; }
+      .print-table tr.cancelled td { color: #666; text-decoration: line-through; }
+      .print-empty { padding: 12mm 0; color: #555; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">B</div>
+        <div>
+          <h1>BAND 주문 대시보드 <span style="font-weight:600;color:var(--muted)">(샘플 데모)</span></h1>
+          <div class="subtitle">댓글 주문을 빠르게 확인하고 수령까지 관리하세요.</div>
+        </div>
+      </div>
+      <div class="sync-wrap">
+        <button id="syncBtn" class="sync-btn" type="button" title="밴드에서 최신 댓글을 지금 불러옵니다">🔄 연동</button>
+        <div class="sync-box"><span class="sync-dot"></span><span id="syncText">선택한 주문글의 댓글을 표시 중 · 정상</span></div>
+      </div>
+    </header>
+
+    <section class="post-banner" aria-label="선택한 밴드 게시글">
+      <div class="post-copy">
+        <div class="eyebrow">선택한 BAND 게시글</div>
+        <div id="postTitle" class="post-title"></div>
+        <div id="postMeta" class="post-meta"></div>
+      </div>
+      <div class="post-picker">
+        <label for="postSelect">주문글 선택</label>
+        <div class="post-picker-line">
+          <select id="postSelect" class="control" aria-label="주문글 선택"></select>
+          <span id="dataBadge" class="mock-badge"></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="statbar" aria-label="주문 요약">
+      <div class="stat main"><span class="stat-num" id="totalOrders">0</span><span class="stat-cap">주문건수</span></div>
+      <div class="stat main"><span class="stat-num" id="totalQty">0</span><span class="stat-cap">총수량</span></div>
+      <div class="stat s-order"><span class="stat-num" id="countOrder">0</span><span class="stat-cap">주문</span></div>
+      <div class="stat s-pickup"><span class="stat-num" id="countPickup">0</span><span class="stat-cap">수령</span></div>
+      <div class="stat s-wait"><span class="stat-num" id="countWait">0</span><span class="stat-cap">대기</span></div>
+      <div class="stat s-cancel"><span class="stat-num" id="countCancel">0</span><span class="stat-cap">취소</span></div>
+    </section>
+
+    <section class="panel">
+      <div class="filters">
+        <div class="field">
+          <label for="adminName">관리자 계정 지정 <span style="font-weight:600;color:var(--faint)">(여러 명은 쉼표로)</span></label>
+          <input id="adminName" class="control" type="text" autocomplete="off" placeholder="예: 온빛, 온빛_관리자" aria-describedby="adminHelp">
+        </div>
+        <div class="field">
+          <label for="dateFrom">댓글 작성 기간</label>
+          <div class="date-line">
+            <input id="dateFrom" class="control num" type="date">
+            <span class="date-sep">~</span>
+            <input id="dateTo" class="control num" type="date">
+          </div>
+          <div class="presets" aria-label="기간 빠른 선택">
+            <button class="preset" type="button" data-days="0">당일</button>
+            <button class="preset" type="button" data-days="6">최근 7일</button>
+            <button class="preset" type="button" data-months="1">최근 1개월</button>
+            <button class="preset" type="button" data-months="3">최근 3개월</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="searchInput">검색</label>
+          <input id="searchInput" class="control" type="search" placeholder="작성자, 댓글, 비고 검색" autocomplete="off">
+        </div>
+        <div>
+          <span class="field-label" id="adminHelp">관리자 댓글</span>
+          <label class="toggle-wrap">
+            <span class="switch"><input id="includeAdmin" type="checkbox"><span class="slider"></span></span>
+            참고 표시
+          </label>
+        </div>
+      </div>
+
+      <div class="table-head">
+        <div>
+          <h2>댓글 주문 목록 <span id="savedHint" class="saved-hint">✓ 자동 저장됨</span></h2>
+          <div id="resultNote" class="result-note" aria-live="polite"></div>
+        </div>
+        <div class="actions">
+          <span class="bulk-group">
+            <select id="bulkStatus" class="control" aria-label="일괄 변경할 상태"><option value="수령">수령</option><option value="주문">주문</option><option value="대기">대기</option><option value="취소">취소</option></select>
+            <button id="bulkCheckedBtn" class="secondary-btn primary-btn" type="button" title="체크한 주문만 위 상태로">✔ 체크한 것</button>
+            <button id="bulkOthersBtn" class="secondary-btn" type="button" title="체크한 것을 빼고 나머지 전체를 위 상태로">체크 뺀 나머지</button>
+          </span>
+          <button id="addOrderBtn" class="secondary-btn" type="button">➕ 주문 직접추가</button>
+          <button id="pasteBtn" class="secondary-btn" type="button">📋 밴드댓글 붙여넣기</button>
+          <button id="printBtn" class="secondary-btn" type="button">인쇄 / 준비리스트</button>
+          <button id="exportBtn" class="secondary-btn" type="button">CSV 내보내기</button>
+          <button id="resetBtn" class="secondary-btn" type="button">현재 글 초기화</button>
+        </div>
+      </div>
+
+      <div id="addForm" class="add-form" hidden>
+        <div class="add-title">주문 직접추가 <span class="add-hint">밴드에 없거나 누락된 주문(전화·현장 등)을 손으로 넣어요</span></div>
+        <div class="add-grid">
+          <label>고객 닉네임<input id="addName" class="control" type="text" placeholder="예: 홍길동" maxlength="40"></label>
+          <label>상품(게시글)<select id="addPost" class="control"></select></label>
+          <label>수량<input id="addQty" class="control num" type="number" min="1" max="999" value="1"></label>
+          <label>상태<select id="addStatus" class="control"><option value="주문">주문</option><option value="수령">수령</option><option value="대기">대기</option><option value="취소">취소</option></select></label>
+          <label>비고<input id="addNote" class="control" type="text" placeholder="선택" maxlength="80"></label>
+          <div class="add-actions"><button id="addSubmit" class="secondary-btn primary-btn" type="button">추가</button><button id="addCancel" class="secondary-btn" type="button">닫기</button></div>
+        </div>
+      </div>
+
+      <div id="pasteForm" class="add-form" hidden>
+        <div class="add-title">밴드댓글 붙여넣기 <span class="add-hint">밴드에서 복사한 주문 댓글을 붙여넣으면 한꺼번에 등록해요 · 한 줄에 한 명</span></div>
+        <div class="paste-grid">
+          <label>어느 상품(게시글)으로<select id="pastePost" class="control"></select></label>
+          <label>붙여넣기 (형식: <b>닉네임 [탭 또는 쉼표] 주문내용</b>, 예: <span style="color:var(--muted)">홍길동, 2봉</span>)
+            <textarea id="pasteText" class="control paste-area" rows="5" placeholder="김미영&#9;1개&#10;박선희, 2봉&#10;이수지  1"></textarea>
+          </label>
+          <div class="add-actions"><button id="pasteSubmit" class="secondary-btn primary-btn" type="button">불러오기</button><button id="pasteCancel" class="secondary-btn" type="button">닫기</button></div>
+        </div>
+      </div>
+
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th class="col-check"><input type="checkbox" id="checkAll" aria-label="전체 선택"></th>
+            <th class="col-seq">순번</th><th class="col-author">작성자</th><th class="col-comment">원본댓글</th>
+            <th class="col-qty">인식수량</th><th class="col-status">상태</th><th class="col-date">작성일시</th><th>비고</th>
+          </tr></thead>
+          <tbody id="orderRows"></tbody>
+          <tfoot id="tableFoot"></tfoot>
+        </table>
+      </div>
+    </section>
+    <p id="dataNote" class="demo-note"></p>
+  </main>
+
+  <section id="printSheet" class="print-sheet" aria-hidden="true"></section>
+
+  <script>
+    (() => {
+      'use strict';
+
+      // 빌드 시 주석 뒤의 빈 배열만 실제 게시글 JSON 배열로 교체합니다.
+      const POSTS_DATA = /*__POSTS_DATA__*/ [{"postKey": "demo-1", "title": "🍎 부사사과 5kg 공구", "createdAt": "2026-08-19T08:00:00", "comments": [{"id": "d1-1", "author": "단골이맘", "authorKey": "m1", "comment": "2박스요", "createdAt": "2026-08-19T08:05:00", "status": "주문", "note": "", "deleted": false}, {"id": "d1-2", "author": "행복한하루", "authorKey": "m2", "comment": "1", "createdAt": "2026-08-19T08:07:00", "status": "주문", "note": "", "deleted": false}, {"id": "d1-3", "author": "제인", "authorKey": "m3", "comment": "1/1", "createdAt": "2026-08-19T08:11:00", "status": "주문", "note": "", "deleted": false}, {"id": "d1-4", "author": "미소천사", "authorKey": "m4", "comment": "세 박스요", "createdAt": "2026-08-19T08:20:00", "status": "주문", "note": "", "deleted": false}, {"id": "d1-5", "author": "봄날", "authorKey": "m5", "comment": "2봉", "createdAt": "2026-08-19T08:31:00", "status": "수령", "note": "", "deleted": false}]}, {"postKey": "demo-2", "title": "🍑 딱복 천도복숭아", "createdAt": "2026-08-19T07:00:00", "comments": [{"id": "d2-1", "author": "라라", "authorKey": "m6", "comment": "1봉지요", "createdAt": "2026-08-19T07:10:00", "status": "주문", "note": "", "deleted": false}, {"id": "d2-2", "author": "단골이맘", "authorKey": "m1", "comment": "2", "createdAt": "2026-08-19T07:15:00", "status": "주문", "note": "", "deleted": false}, {"id": "d2-3", "author": "하늘색", "authorKey": "m7", "comment": "한개요", "createdAt": "2026-08-19T07:22:00", "status": "주문", "note": "", "deleted": false}, {"id": "d2-4", "author": "코코맘", "authorKey": "m8", "comment": "3봉", "createdAt": "2026-08-19T07:41:00", "status": "주문", "note": "", "deleted": false}]}, {"postKey": "demo-3", "title": "🥬 유기농 애호박·오이 묶음", "createdAt": "2026-08-18T18:00:00", "comments": [{"id": "d3-1", "author": "제인", "authorKey": "m3", "comment": "애호박 2 오이 1", "createdAt": "2026-08-18T18:05:00", "status": "주문", "note": "", "deleted": false}, {"id": "d3-2", "author": "봄날", "authorKey": "m5", "comment": "1", "createdAt": "2026-08-18T18:19:00", "status": "주문", "note": "", "deleted": false}, {"id": "d3-3", "author": "라라", "authorKey": "m6", "comment": "2", "createdAt": "2026-08-18T18:33:00", "status": "취소", "note": "고객요청", "deleted": true}]}];
+      const COLLECTED_AT = "2026. 08. 19. 15:13";
+      const BACKEND_URL = "";  // Cloudflare Worker 주소(빌드 시 주입). 없으면 새로고침으로 대체.
+
+      const mockRawComments = [
+        { id: 'c001', author: '김미영', authorKey: 'u001', comment: '1개 주문해요', createdAt: '2026-08-19T07:18:00', status: '주문', note: '' },
+        { id: 'c002', author: '박선희', authorKey: 'u002', comment: '1/2/1 부탁드려요', createdAt: '2026-08-19T07:24:00', status: '주문', note: '한 묶음' },
+        { id: 'c003', author: '온빛', authorKey: 'admin01', comment: '감사합니다 주문 확인', createdAt: '2026-08-19T07:25:00', status: '주문', note: '' },
+        { id: 'c004', author: '이수지', authorKey: 'u004', comment: '2개요!', createdAt: '2026-08-19T07:31:00', status: '수령', note: '오후 방문' },
+        { id: 'c005', author: '최지경', authorKey: 'u005', comment: '1/한개 더/1', createdAt: '2026-08-19T07:43:00', status: '대기', note: '' },
+        { id: 'c006', author: '정하늘', authorKey: 'u006', comment: '3개 주문할게요', createdAt: '2026-08-19T08:02:00', status: '주문', note: '', deleted: true },
+        { id: 'c007', author: '오지윤', authorKey: 'u007', comment: '1개 부탁드려요', createdAt: '2026-08-19T08:11:00', status: '취소', note: '고객 요청' },
+        { id: 'c008', author: '온빛_관리자', authorKey: 'admin02', comment: '네, 확인했습니다 감사합니다', createdAt: '2026-08-19T08:12:00', status: '주문', note: '' },
+        { id: 'c009', author: '한소라', authorKey: 'u009', comment: '2/1 주세요', createdAt: '2026-08-19T08:27:00', status: '대기', note: '' },
+        { id: 'c010', author: '오정미', authorKey: 'u010', comment: '1개요', createdAt: '2026-08-19T09:05:00', status: '수령', note: '보냉백' },
+        { id: 'c011', author: '강나래', authorKey: 'u011', comment: '2개 예약합니다', createdAt: '2026-08-18T18:42:00', status: '주문', note: '' },
+        { id: 'c012', author: '온빛', authorKey: 'admin01', comment: '주문 확인했습니다 :)', createdAt: '2026-08-18T18:44:00', status: '주문', note: '' },
+        { id: 'c013', author: '송유진', authorKey: 'u013', comment: '1/1/2 주문', createdAt: '2026-08-02T11:16:00', status: '수령', note: '' },
+        { id: 'c014', author: '조현주', authorKey: 'u014', comment: '2개 부탁합니다', createdAt: '2026-07-28T16:33:00', status: '수령', note: '', deleted: true },
+        { id: 'c015', author: '배유나', authorKey: 'u015', comment: '1개 주문', createdAt: '2026-05-28T10:09:00', status: '취소', note: '재고 소진' }
+      ];
+
+      const isMockData = POSTS_DATA.length === 0;
+      const posts = isMockData ? [{
+        postKey: 'post_demo_0819',
+        title: '데모 주문글',
+        createdAt: '2026-08-19T06:50:00',
+        comments: mockRawComments
+      }] : POSTS_DATA;
+
+      const STATUS_LIST = ['주문', '수령', '대기', '취소'];
+      const GLOBAL_STORAGE_KEY = 'brise-band-global';
+      const TODAY = localDateString(new Date());
+      const allCommentDates = posts.flatMap(post => Array.isArray(post.comments) ? post.comments.map(comment => String(comment.createdAt || '').slice(0, 10)).filter(Boolean) : []);
+      const DEFAULT_DATE_FROM = allCommentDates.reduce((earliest, date) => date < earliest ? date : earliest, '2026-05-19');
+      const avatarColors = ['#16876b', '#b06d27', '#5877b7', '#7b5aaa', '#b14e61', '#55766d'];
+      const el = id => document.getElementById(id);
+
+      let selectedPostIndex = -1;  // 기본: 전체 보기(모든 게시글 한눈에)
+      let state = { ...loadGlobalState(), edits: {} };
+      let saveTimer;
+      const checkedIds = new Set();  // 일괄처리용 체크 선택(세션 유지)
+
+      function localDateString(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+
+      // 전체 보기: 모든 게시글 댓글을 하나의 플랫 리스트로(기존 프로그램처럼 기간 내 전체를 한눈에)
+      let _allPostCache = null;
+      function allPost() {
+        if (_allPostCache) return _allPostCache;
+        // BAND comment_key는 게시글 내에서만 유일 → 전체 보기에선 게시글키로 네임스페이스해 충돌 방지
+        const comments = posts.flatMap(p => Array.isArray(p.comments)
+          ? p.comments.map(c => ({ ...c, id: `${p.postKey}::${c.id}`, _post: p.title }))
+          : []);
+        _allPostCache = { title: '📋 전체 주문 (모든 게시글)', postKey: '__ALL__', comments };
+        return _allPostCache;
+      }
+      function selectedPost() { return selectedPostIndex < 0 ? allPost() : posts[selectedPostIndex]; }
+      // 수동추가 주문(누락·전화·현장 주문 직접입력). 브라우저에 저장돼 데이터 갱신에도 유지.
+      const MANUAL_KEY = 'brise-band-manual';
+      function loadManual() { try { const a = JSON.parse(localStorage.getItem(MANUAL_KEY)); return Array.isArray(a) ? a : []; } catch (_) { return []; } }
+      function saveManual() { try { localStorage.setItem(MANUAL_KEY, JSON.stringify(manualOrders)); } catch (_) { /* 저장 제한 무시 */ } }
+      let manualOrders = loadManual();
+      function manualRows(postKey) {
+        return manualOrders
+          .filter(m => postKey == null || m.postKey === postKey)
+          .map(m => ({ id: m.id, author: m.author, authorKey: 'manual', comment: String(m.comment ?? ''), createdAt: m.createdAt, status: m.status, note: m.note || '', deleted: false, _manual: true, _post: m._post }));
+      }
+      function rawComments() {
+        const post = selectedPost();
+        const base = Array.isArray(post.comments) ? post.comments : [];
+        return selectedPostIndex < 0 ? [...base, ...manualRows(null)] : [...base, ...manualRows(post.postKey)];
+      }
+      function postStorageKey(post = selectedPost()) { return `brise-band-${String(post.postKey)}`; }
+
+      function plainCommentText(value) {
+        // BAND 멘션 태그의 속성값은 숨기되 멘션 이름과 이모지는 일반 문자열로 보존한다.
+        return String(value ?? '').replace(/<\/?band:refer\b[^>]*>/gi, '');
+      }
+
+      function safeQuantity(value) {
+        const quantity = Number(value);
+        return Number.isFinite(quantity) ? Math.min(999, Math.max(0, Math.floor(quantity))) : 0;
+      }
+
+      function safeTotal(value) {
+        const total = Number(value);
+        return Number.isFinite(total) ? Math.max(0, Math.floor(total)) : 0;
+      }
+
+      function recognizeQuantity(text) {
+        // 슬래시별 숫자 합산은 유지하되, 실제 주문에서 확인한 짧은 형식만 자동 확정한다.
+        const pieces = plainCommentText(text).split('/').map(value => value.trim());
+        const koreanNumberWord = /(?:한|두|세|네|댓|다섯|여섯|일곱|여덟|아홉|열)\s*(?:개|통|근|박스|판|봉|키로|킬로|kg|수)?/i;
+        const acceptedPiece = /^(?:(?:홍농|영광)\s*[-:]?\s*)?\d+\s*(?:(?:개|통|근|박스|판|봉(?:지)?|키로|킬로|kg)\s*)?(?:(?:홍농|영광)\s*)?(?:개요|통이요|근이요|박스요|판이요|봉이요|봉지요|키로요|킬로요|추가|더요|주문(?:해요|할게요)?|부탁드려요|주세요|예약합니다)?\s*[~!?.。·,，]*$/i;
+        let quantity = 0;
+        let flagged = pieces.length === 0;
+        pieces.forEach(piece => {
+          const matches = piece.match(/\d+/g) || [];
+          if (!piece || matches.length !== 1 || koreanNumberWord.test(piece) || !acceptedPiece.test(piece)) flagged = true;
+          if (matches.length === 1) {
+            const amount = Number(matches[0]);
+            if (Number.isSafeInteger(amount) && amount > 0) quantity += amount;
+            else flagged = true;
+          }
+        });
+        if (!Number.isSafeInteger(quantity) || quantity <= 0 || quantity > 999) flagged = true;
+        return { quantity: safeQuantity(quantity), flagged };
+      }
+
+      function defaultEdits() {
+        const edits = {};
+        rawComments().forEach(comment => {
+          const parsed = recognizeQuantity(comment.comment);
+          edits[comment.id] = { qty: parsed.quantity, status: STATUS_LIST.includes(comment.status) ? comment.status : '주문', note: String(comment.note || '') };
+        });
+        return edits;
+      }
+
+      function loadGlobalState() {
+        const base = { adminName: "샘플청과 사장님", includeAdmin: false, dateFrom: DEFAULT_DATE_FROM, dateTo: TODAY, search: '' };
+        try {
+          const saved = JSON.parse(localStorage.getItem(GLOBAL_STORAGE_KEY));
+          if (!saved || typeof saved !== 'object') return base;
+          return { ...base, ...saved, search: '' };
+        } catch (_) { return base; }
+      }
+
+      function loadPostEdits() {
+        const base = defaultEdits();
+        try {
+          const saved = JSON.parse(localStorage.getItem(postStorageKey()));
+          if (!saved || typeof saved !== 'object') return base;
+          Object.keys(base).forEach(id => {
+            const candidate = saved[id];
+            if (!candidate || typeof candidate !== 'object') return;
+            base[id] = {
+              qty: safeQuantity(candidate.qty),
+              status: STATUS_LIST.includes(candidate.status) ? candidate.status : base[id].status,
+              note: String(candidate.note ?? base[id].note).slice(0, 80)
+            };
+          });
+          return base;
+        } catch (_) { return base; }
+      }
+
+      function persistGlobal() {
+        const globalState = { adminName: state.adminName, includeAdmin: state.includeAdmin, dateFrom: state.dateFrom, dateTo: state.dateTo };
+        try { localStorage.setItem(GLOBAL_STORAGE_KEY, JSON.stringify(globalState)); } catch (_) { /* 저장 제한 환경에서도 화면 동작 유지 */ }
+      }
+
+      function persistEdits(showHint = true) {
+        try { localStorage.setItem(postStorageKey(), JSON.stringify(state.edits)); } catch (_) { return; }
+        if (!showHint) return;
+        const hint = el('savedHint');
+        hint.classList.add('show');
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(() => hint.classList.remove('show'), 1300);
+      }
+
+      function dateOnly(iso) { return String(iso || '').slice(0, 10); }
+      function adminNames() { return String(state.adminName || '').split(',').map(name => name.trim()).filter(Boolean); }
+      function isAdmin(comment) { return adminNames().includes(String(comment.author || '').trim()); }
+      function getEdit(id) {
+        const edit = state.edits[id];
+        if (!edit || typeof edit !== 'object') return { qty: 0, status: '대기', note: '' };
+        return {
+          qty: safeQuantity(edit.qty),
+          status: STATUS_LIST.includes(edit.status) ? edit.status : '대기',
+          note: String(edit.note ?? '')
+        };
+      }
+
+      function filteredComments() {
+        const needle = state.search.trim().toLocaleLowerCase('ko');
+        return rawComments().filter(comment => {
+          const commentDate = dateOnly(comment.createdAt);
+          if (commentDate < state.dateFrom || commentDate > state.dateTo) return false;
+          if (!state.includeAdmin && isAdmin(comment)) return false;
+          const edit = getEdit(comment.id);
+          const haystack = `${comment.author || ''} ${comment.comment || ''} ${edit.note}`.toLocaleLowerCase('ko');
+          return !needle || haystack.includes(needle);
+        });
+      }
+
+      function orderComments(rows = filteredComments()) { return rows.filter(comment => !isAdmin(comment)); }
+      function escapeHtml(value) { return String(value ?? '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char])); }
+
+      function selectedPostOrders() {
+        // 준비리스트는 화면의 날짜/검색 필터와 무관하게 현재 게시글 전체 주문을 사용한다.
+        return rawComments().filter(comment => !isAdmin(comment));
+      }
+
+      function customerPreparationTotals(orders) {
+        const totals = new Map();
+        orders.forEach(comment => {
+          const edit = getEdit(comment.id);
+          if (edit.status === '취소') return;
+          const name = String(comment.author || '').trim() || '이름 없음';
+          totals.set(name, (totals.get(name) || 0) + safeQuantity(edit.qty));
+        });
+        return Array.from(totals, ([name, qty]) => ({ name, qty: safeTotal(qty) }));
+      }
+
+      function formatDate(iso) {
+        const date = new Date(iso);
+        if (Number.isNaN(date.getTime())) return '-';
+        return new Intl.DateTimeFormat('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).format(date);
+      }
+
+      function formatPostDate(iso) {
+        const date = new Date(iso);
+        if (Number.isNaN(date.getTime())) return '날짜 미상';
+        return new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+      }
+
+      function statusOptions(selected) { return STATUS_LIST.map(status => `<option value="${status}"${status === selected ? ' selected' : ''}>${status}</option>`).join(''); }
+
+      function updatePostBanner() {
+        const post = selectedPost();
+        el('postTitle').textContent = post.title || '제목 없는 주문글';
+        el('postMeta').textContent = selectedPostIndex < 0
+          ? `모든 게시글 ${posts.length}개 · 수집된 댓글 ${rawComments().length}개 · 기간으로 좁혀 보세요`
+          : `밴드 · 게시글 ID ${String(post.postKey ?? '미상')} · 수집된 댓글 ${rawComments().length}개`;
+      }
+
+      function updateSummary(rows = filteredComments()) {
+        const orders = orderComments(rows);
+        const totals = Object.fromEntries(STATUS_LIST.map(status => [status, orders.filter(comment => getEdit(comment.id).status === status).length]));
+        const totalQty = orders.reduce((sum, comment) => sum + safeQuantity(getEdit(comment.id).qty), 0);
+        el('totalOrders').textContent = orders.length;
+        el('totalQty').textContent = totalQty;
+        el('countOrder').textContent = totals['주문'];
+        el('countPickup').textContent = totals['수령'];
+        el('countWait').textContent = totals['대기'];
+        el('countCancel').textContent = totals['취소'];
+        el('resultNote').textContent = orders.length
+          ? `조건에 맞는 주문 ${orders.length}건${state.includeAdmin ? ` · 관리자 댓글 ${rows.length - orders.length}건 참고 표시` : ''}`
+          : `집계할 고객 주문이 없습니다${state.includeAdmin && rows.length ? ` · 관리자 댓글 ${rows.length}건만 참고 표시 중` : ''}.`;
+        const grandTotal = document.querySelector('.grand-total');
+        if (grandTotal) grandTotal.textContent = `${totalQty}개`;
+        return { totalQty };
+      }
+
+      function render() {
+        updatePostBanner();
+        const rows = filteredComments();
+        const { totalQty } = updateSummary(rows);
+        if (!rows.length) {
+          const hasCustomerOrder = rawComments().some(comment => !isAdmin(comment));
+          el('orderRows').innerHTML = `<tr><td colspan="8" class="empty">${hasCustomerOrder ? '조건에 맞는 주문이 없습니다. 기간이나 검색어를 확인해 주세요.' : '아직 집계할 고객 주문이 없습니다. 새 댓글이 들어오면 여기에 표시됩니다.'}</td></tr>`;
+          el('tableFoot').innerHTML = '';
+          if (typeof syncCheckAll === 'function') syncCheckAll();
+          return;
+        }
+
+        let sequence = 0;
+        el('orderRows').innerHTML = rows.map((comment, index) => {
+          const admin = isAdmin(comment);
+          const edit = getEdit(comment.id);
+          const parsed = recognizeQuantity(comment.comment);
+          if (!admin) sequence += 1;
+          const rowClass = admin ? 'admin-row' : (parsed.flagged ? 'flagged' : '');
+          const deleted = comment.deleted ? '<span class="deleted-tag">원본 삭제</span>' : '';
+          const warning = parsed.flagged && !admin ? '<div class="warning-tag">자동 인식 모호 · 수량 확인</div>' : '';
+          const qtyCell = admin ? '<span style="color:var(--faint)">합계 제외</span>' : `<input class="qty-input num" type="number" min="0" max="999" step="1" inputmode="numeric" value="${safeQuantity(edit.qty)}" data-action="qty" data-id="${escapeHtml(comment.id)}" aria-label="${escapeHtml(comment.author)} 인식 수량">${warning}`;
+          const statusCell = admin ? '<span class="admin-tag">관리자 댓글</span>' : `<select class="status-select" data-action="status" data-id="${escapeHtml(comment.id)}" data-status="${escapeHtml(edit.status)}" aria-label="${escapeHtml(comment.author)} 주문 상태">${statusOptions(edit.status)}</select>`;
+          const noteCell = admin ? '<span style="font-size:12px">주문 집계에서 제외</span>' : `<input class="note-input" type="text" maxlength="80" value="${escapeHtml(edit.note)}" placeholder="메모 입력" data-action="note" data-id="${escapeHtml(comment.id)}" aria-label="${escapeHtml(comment.author)} 비고">`;
+          return `<tr class="${rowClass}">
+            <td class="col-check">${admin ? '' : `<input type="checkbox" class="row-check" data-id="${escapeHtml(comment.id)}"${checkedIds.has(comment.id) ? ' checked' : ''} aria-label="${escapeHtml(comment.author)} 선택">`}</td>
+            <td class="col-seq num">${admin ? '—' : sequence}</td>
+            <td><div class="author"><span class="avatar" style="background:${avatarColors[index % avatarColors.length]}">${escapeHtml(String(comment.author || '?').slice(0, 1))}</span><span class="author-name">${escapeHtml(comment.author || '이름 없음')}${admin ? '<span class="admin-tag">관리자</span>' : ''}</span></div></td>
+            <td><div class="comment">${comment._post ? `<span class="post-pill">${escapeHtml(comment._post)}</span>` : ''}${escapeHtml(plainCommentText(comment.comment || ''))}${deleted}${comment._manual ? `<span class="manual-tag">직접추가</span><button class="del-manual" data-action="delManual" data-id="${escapeHtml(comment.id)}" title="이 수동주문 삭제">✕</button>` : ''}</div></td>
+            <td>${qtyCell}</td><td>${statusCell}</td><td class="date-cell num">${formatDate(comment.createdAt)}</td><td>${noteCell}</td>
+          </tr>`;
+        }).join('');
+        const hasOrders = orderComments(rows).length > 0;
+        el('tableFoot').innerHTML = hasOrders
+          ? `<tr><td colspan="4" class="total-label">현재 조회 결과 총 합계</td><td class="grand-total num">${totalQty}개</td><td colspan="3" style="color:var(--muted);font-size:11px">수량 수정 시 즉시 반영됩니다.</td></tr>`
+          : '<tr><td colspan="8" class="empty">고객 주문이 아직 없습니다. 새 주문 댓글이 수집되면 여기에 표시됩니다.</td></tr>';
+        if (typeof syncCheckAll === 'function') syncCheckAll();
+      }
+
+      function setPreset(button) {
+        document.querySelectorAll('.preset').forEach(item => item.classList.toggle('active', item === button));
+        const end = new Date(`${TODAY}T12:00:00`);
+        const start = new Date(end);
+        if (button.dataset.months) start.setMonth(start.getMonth() - Number(button.dataset.months));
+        else start.setDate(start.getDate() - Number(button.dataset.days || 0));
+        state.dateFrom = localDateString(start);
+        state.dateTo = TODAY;
+        syncControls();
+        persistGlobal();
+        render();
+      }
+
+      function csvCell(value) { return `"${String(value ?? '').replace(/"/g, '""')}"`; }
+
+      function safeFilePart(value) { return String(value || 'post').replace(/[\\/:*?"<>|]+/g, '-').slice(0, 60); }
+
+      function exportCsv() {
+        const orders = orderComments();
+        if (!orders.length) { alert('내보낼 주문이 없습니다.'); return; }
+        const header = ['순번', '작성자', '원본댓글', '인식수량', '상태', '작성일시', '원본삭제', '비고'];
+        const body = orders.map((comment, index) => {
+          const edit = getEdit(comment.id);
+          return [index + 1, comment.author, comment.comment, edit.qty, edit.status, String(comment.createdAt || '').replace('T', ' '), comment.deleted ? 'Y' : '', edit.note];
+        });
+        const csv = '\uFEFF' + [header, ...body].map(row => row.map(csvCell).join(',')).join('\r\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `band-orders-${safeFilePart(selectedPost().postKey)}-${state.dateFrom}-${state.dateTo}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      function printPreparationList() {
+        persistEdits(false);
+        const post = selectedPost();
+        const orders = selectedPostOrders();
+        const customerTotals = customerPreparationTotals(orders);
+        const preparationQty = safeTotal(customerTotals.reduce((sum, customer) => sum + safeTotal(customer.qty), 0));
+        const rows = orders.map(comment => {
+          const edit = getEdit(comment.id);
+          const cancelled = edit.status === '취소';
+          return `<tr${cancelled ? ' class="cancelled"' : ''}>
+            <td>${escapeHtml(String(comment.author || '').trim() || '이름 없음')}</td>
+            <td class="print-col-qty num">${safeQuantity(edit.qty)}개</td>
+            <td>${escapeHtml(edit.status)}</td>
+            <td>${escapeHtml(edit.note || '-')}</td>
+          </tr>`;
+        }).join('');
+        const totals = customerTotals.length
+          ? `<ul class="print-customer-totals">${customerTotals.map(customer => `<li>${escapeHtml(customer.name)} <strong class="num">${safeTotal(customer.qty)}개</strong></li>`).join('')}</ul>`
+          : '<p class="print-empty">준비할 고객 주문이 없습니다.</p>';
+        el('printSheet').innerHTML = `
+          <header class="print-header">
+            <h1>${escapeHtml(post.title || '제목 없는 주문글')} · 준비리스트</h1>
+            <div class="print-meta">게시일 ${escapeHtml(formatPostDate(post.createdAt))} · 고객 주문 ${orders.length}건</div>
+            <div class="print-total num">총 준비 수량: ${safeTotal(preparationQty)}개</div>
+            <div class="print-help">취소 주문은 준비 수량과 고객별 합계에서 제외됩니다.</div>
+          </header>
+          <section class="print-section">
+            <h2>고객별 합계</h2>
+            ${totals}
+          </section>
+          <section class="print-section">
+            <h2>주문 상세</h2>
+            ${orders.length ? `<table class="print-table"><thead><tr><th class="print-col-name">고객 닉네임</th><th class="print-col-qty">수량</th><th class="print-col-status">상태</th><th>비고</th></tr></thead><tbody>${rows}</tbody></table>` : '<p class="print-empty">이 게시글에는 고객 주문이 아직 없습니다.</p>'}
+          </section>`;
+        window.print();
+      }
+
+      function syncControls() {
+        el('adminName').value = state.adminName;
+        el('includeAdmin').checked = state.includeAdmin;
+        el('dateFrom').value = state.dateFrom;
+        el('dateTo').value = state.dateTo;
+        el('searchInput').value = state.search;
+        document.querySelectorAll('.preset').forEach(item => item.classList.remove('active'));
+        if (state.dateFrom === TODAY && state.dateTo === TODAY) document.querySelector('.preset[data-days="0"]').classList.add('active');
+      }
+
+      function initializePostSelector() {
+        const collectedAt = String(COLLECTED_AT || '').trim();
+        const collectedAtPlaceholder = ['/*__COLLECTED_', 'AT__*/'].join('');
+        if (collectedAt && collectedAt !== collectedAtPlaceholder) {
+          el('syncText').textContent = `마지막 수집 ${collectedAt}`;
+        }
+        el('postSelect').innerHTML = `<option value="-1">📋 전체 주문 (모든 게시글 한눈에)</option>`
+          + posts.map((post, index) => `<option value="${index}">${escapeHtml(post.title || '제목 없는 주문글')} (${escapeHtml(formatPostDate(post.createdAt))})</option>`).join('');
+        el('postSelect').value = String(selectedPostIndex);
+        el('dataBadge').textContent = isMockData ? '데모 데이터' : '실데이터';
+        const sourceNote = isMockData
+          ? '※ 데모: 목업 데이터입니다. 실제 밴드 API 연동 시 주입된 게시글과 댓글 데이터로 동작합니다. 관리자 댓글은 참고 표시할 수 있지만 주문 건수와 합계에서는 제외됩니다.'
+          : '※ 실데이터: 빌드 시 주입된 게시글과 댓글을 표시합니다. 관리자 댓글은 참고 표시할 수 있지만 주문 건수와 합계에서는 제외됩니다.';
+        el('dataNote').textContent = `${sourceNote} ※ 데이터는 주기적으로 자동 갱신됩니다. 방금 올라온 주문은 다음 갱신에 반영돼요.`;
+      }
+
+      el('orderRows').addEventListener('input', event => {
+        const target = event.target;
+        const id = target.dataset.id;
+        if (!id || !state.edits[id]) return;
+        if (target.dataset.action === 'qty') state.edits[id].qty = safeQuantity(target.value);
+        if (target.dataset.action === 'note') state.edits[id].note = target.value;
+        persistEdits();
+        updateSummary();
+      });
+
+      el('orderRows').addEventListener('keydown', event => {
+        if (event.target.dataset.action === 'qty' && ['e', 'E', '+', '-', '.', ','].includes(event.key)) event.preventDefault();
+      });
+
+      el('orderRows').addEventListener('change', event => {
+        const target = event.target;
+        if (target.dataset.action !== 'status' || !state.edits[target.dataset.id]) return;
+        state.edits[target.dataset.id].status = target.value;
+        persistEdits();
+        render();
+      });
+
+      el('orderRows').addEventListener('blur', event => {
+        const target = event.target;
+        const id = target.dataset.id;
+        if (target.dataset.action !== 'qty' || !id || !state.edits[id]) return;
+        const quantity = safeQuantity(target.value);
+        state.edits[id].qty = quantity;
+        target.value = quantity;
+        persistEdits();
+        updateSummary();
+      }, true);
+
+      el('postSelect').addEventListener('change', event => {
+        // 입력 이벤트마다 저장하지만 게시글 전환 직전에도 현재 글 편집을 보존한다.
+        persistEdits(false);
+        selectedPostIndex = Number(event.target.value) || 0;
+        state.edits = loadPostEdits();
+        state.search = '';
+        el('searchInput').value = '';
+        render();
+      });
+      el('adminName').addEventListener('input', event => { state.adminName = event.target.value; persistGlobal(); render(); });
+      el('includeAdmin').addEventListener('change', event => { state.includeAdmin = event.target.checked; persistGlobal(); render(); });
+      el('searchInput').addEventListener('input', event => { state.search = event.target.value; render(); });
+      ['dateFrom', 'dateTo'].forEach(id => el(id).addEventListener('change', event => {
+        state[id] = event.target.value;
+        if (state.dateFrom > state.dateTo) {
+          if (id === 'dateFrom') state.dateTo = state.dateFrom;
+          else state.dateFrom = state.dateTo;
+        }
+        document.querySelectorAll('.preset').forEach(item => item.classList.remove('active'));
+        syncControls();
+        persistGlobal();
+        render();
+      }));
+      document.querySelectorAll('.preset').forEach(button => button.addEventListener('click', () => setPreset(button)));
+      el('printBtn').addEventListener('click', printPreparationList);
+      el('exportBtn').addEventListener('click', exportCsv);
+      el('resetBtn').addEventListener('click', () => {
+        if (!confirm('현재 주문글의 수정된 수량, 상태, 비고를 모두 초기값으로 되돌릴까요?')) return;
+        try { localStorage.removeItem(postStorageKey()); } catch (_) { /* 저장 제한 시 메모리 값만 초기화 */ }
+        state.edits = defaultEdits();
+        render();
+      });
+
+      // 체크박스 선택 관리(기존 프로그램처럼 체크→일괄처리).
+      el('orderRows').addEventListener('change', event => {
+        const target = event.target;
+        if (!target.classList || !target.classList.contains('row-check')) return;
+        const id = target.dataset.id;
+        if (target.checked) checkedIds.add(id); else checkedIds.delete(id);
+        syncCheckAll();
+      });
+      el('checkAll').addEventListener('change', event => {
+        const on = event.target.checked;
+        orderComments(filteredComments()).forEach(c => { if (on) checkedIds.add(c.id); else checkedIds.delete(c.id); });
+        render();
+      });
+      function syncCheckAll() {
+        const visible = orderComments(filteredComments());
+        const box = el('checkAll');
+        const checkedVisible = visible.filter(c => checkedIds.has(c.id)).length;
+        box.checked = visible.length > 0 && checkedVisible === visible.length;
+        box.indeterminate = checkedVisible > 0 && checkedVisible < visible.length;
+      }
+
+      // 일괄 상태 처리: 체크한 주문만 / 체크 뺀 나머지. 닉네임 검색결과에서도 그대로 동작.
+      function applyBulk(useChecked) {
+        const status = el('bulkStatus').value;
+        const visible = orderComments(filteredComments());
+        const targets = useChecked
+          ? visible.filter(c => checkedIds.has(c.id))
+          : visible.filter(c => !checkedIds.has(c.id));
+        if (!targets.length) {
+          alert(useChecked ? '체크된 주문이 없어요. 처리할 주문을 체크해 주세요.' : '대상 주문이 없어요.');
+          return;
+        }
+        const how = useChecked ? `체크한 ${targets.length}건` : `체크 뺀 나머지 ${targets.length}건`;
+        if (!confirm(`${how}을 모두 '${status}'(으)로 바꿀까요?`)) return;
+        targets.forEach(comment => {
+          const edit = getEdit(comment.id);
+          state.edits[comment.id] = { ...edit, status };
+        });
+        if (useChecked) targets.forEach(c => checkedIds.delete(c.id));  // 처리한 건 체크 해제
+        persistEdits();
+        render();
+      }
+      el('bulkCheckedBtn').addEventListener('click', () => applyBulk(true));
+      el('bulkOthersBtn').addEventListener('click', () => applyBulk(false));
+
+      // 연동(수동 새로고침): 백엔드가 연결돼 있으면 밴드에서 즉시 최신 댓글을 불러오고, 없으면 페이지 새로고침.
+      el('syncBtn').addEventListener('click', async () => {
+        const btn = el('syncBtn');
+        const placeholder = ['/*__BACKEND', '_URL__*/'].join('');
+        if (!BACKEND_URL || BACKEND_URL === placeholder) { location.href = location.pathname + '?t=' + Date.now(); return; }
+        const old = btn.textContent; btn.disabled = true; btn.textContent = '⏳ 불러오는 중...';
+        try {
+          const res = await fetch(BACKEND_URL, { cache: 'no-store' });
+          const data = await res.json();
+          if (data.error) throw new Error(data.error);
+          if (!Array.isArray(data.posts)) throw new Error('데이터 형식이 올바르지 않습니다.');
+          posts.length = 0; data.posts.forEach(p => posts.push(p));
+          _allPostCache = null;
+          if (data.adminName) state.adminName = data.adminName;
+          selectedPostIndex = -1;
+          state.edits = loadPostEdits();
+          initializePostSelector();
+          syncControls();
+          const n = new Date();
+          const pad = v => String(v).padStart(2, '0');
+          el('syncText').textContent = `마지막 연동 ${n.getFullYear()}. ${pad(n.getMonth() + 1)}. ${pad(n.getDate())}. ${pad(n.getHours())}:${pad(n.getMinutes())}`;
+          render();
+          if (data.note) alert('안내: ' + data.note);
+        } catch (e) {
+          alert('연동에 실패했어요: ' + (e && e.message ? e.message : e) + '\n잠시 후 다시 시도해 주세요.');
+        } finally {
+          btn.disabled = false; btn.textContent = old;
+        }
+      });
+
+      // 주문 직접추가(수동 등록) — 밴드에 없거나 누락된 주문 손입력.
+      el('addPost').innerHTML = posts.map((p, i) => `<option value="${i}">${escapeHtml(p.title || '제목 없는 주문글')}</option>`).join('');
+      el('addOrderBtn').addEventListener('click', () => {
+        const f = el('addForm');
+        f.hidden = !f.hidden;
+        if (!f.hidden) { if (selectedPostIndex >= 0) el('addPost').value = String(selectedPostIndex); el('addName').focus(); }
+      });
+      el('addCancel').addEventListener('click', () => { el('addForm').hidden = true; });
+      el('addSubmit').addEventListener('click', () => {
+        const name = el('addName').value.trim();
+        const qty = Math.max(1, Math.min(999, Math.floor(Number(el('addQty').value) || 0)));
+        if (!name) { alert('고객 닉네임을 입력해 주세요.'); el('addName').focus(); return; }
+        if (!qty) { alert('수량을 1개 이상 입력해 주세요.'); el('addQty').focus(); return; }
+        const p = posts[Number(el('addPost').value) || 0];
+        const id = 'manual-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+        manualOrders.push({
+          id, author: name, comment: String(qty), postKey: p.postKey, _post: p.title,
+          status: el('addStatus').value, note: el('addNote').value.trim(),
+          createdAt: new Date().toISOString()
+        });
+        saveManual();
+        // 새 수동주문의 수량/상태를 edits에 반영
+        state.edits[id] = { qty, status: el('addStatus').value, note: el('addNote').value.trim() };
+        persistEdits(false);
+        el('addName').value = ''; el('addQty').value = '1'; el('addNote').value = '';
+        el('addForm').hidden = true;
+        render();
+      });
+      // 밴드댓글 붙여넣기(원문 일괄 등록). 연동 백엔드가 있으면 대개 불필요하지만, 누락분 손보정용.
+      el('pastePost').innerHTML = posts.map((p, i) => `<option value="${i}">${escapeHtml(p.title || '제목 없는 주문글')}</option>`).join('');
+      el('pasteBtn').addEventListener('click', () => {
+        const f = el('pasteForm'); f.hidden = !f.hidden;
+        if (!f.hidden) { if (selectedPostIndex >= 0) el('pastePost').value = String(selectedPostIndex); el('pasteText').focus(); }
+      });
+      el('pasteCancel').addEventListener('click', () => { el('pasteForm').hidden = true; });
+      el('pasteSubmit').addEventListener('click', () => {
+        const p = posts[Number(el('pastePost').value) || 0];
+        const lines = el('pasteText').value.split('\n').map(l => l.trim()).filter(Boolean);
+        if (!lines.length) { alert('붙여넣은 내용이 없어요.'); return; }
+        let added = 0, skipped = 0, t = Date.now();
+        lines.forEach(line => {
+          let name = '', comment = '';
+          if (line.includes('\t')) { const i = line.indexOf('\t'); name = line.slice(0, i).trim(); comment = line.slice(i + 1).trim(); }
+          else if (line.includes(',')) { const i = line.indexOf(','); name = line.slice(0, i).trim(); comment = line.slice(i + 1).trim(); }
+          else { const m = line.match(/^(.+?)\s{2,}(.+)$/) || line.match(/^(\S+)\s+(.+)$/); if (m) { name = m[1].trim(); comment = m[2].trim(); } }
+          if (!name || !comment) { skipped += 1; return; }
+          manualOrders.push({ id: `manual-${t}-${added}-${Math.floor(Math.random() * 100000)}`, author: name, comment, postKey: p.postKey, _post: p.title, status: '주문', note: '', createdAt: new Date().toISOString() });
+          added += 1;
+        });
+        saveManual();
+        state.edits = loadPostEdits();
+        el('pasteText').value = ''; el('pasteForm').hidden = true;
+        render();
+        alert(`${added}건 등록했어요.` + (skipped ? ` (${skipped}줄은 형식을 못 읽어 건너뛰었어요)` : ''));
+      });
+
+      el('orderRows').addEventListener('click', event => {
+        const btn = event.target.closest('[data-action="delManual"]');
+        if (!btn) return;
+        const id = btn.dataset.id;
+        if (!confirm('이 직접추가 주문을 삭제할까요?')) return;
+        manualOrders = manualOrders.filter(m => m.id !== id);
+        saveManual();
+        delete state.edits[id];
+        checkedIds.delete(id);
+        render();
+      });
+
+      initializePostSelector();
+      state.edits = loadPostEdits();
+      el('dateFrom').min = DEFAULT_DATE_FROM;
+      el('dateTo').min = DEFAULT_DATE_FROM;
+      el('dateFrom').max = TODAY;
+      el('dateTo').max = TODAY;
+      syncControls();
+      render();
+    })();
+  </script>
+</body>
+</html>
