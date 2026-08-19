@@ -62,6 +62,8 @@
     .stat.s-wait .stat-num { color: var(--amber); }
     .stat.s-cancel .stat-num { color: var(--red); }
     .post-pill { display: inline-block; margin-right: 6px; padding: 2px 8px; border-radius: 6px; background: var(--green-soft); color: var(--green-dark); font-size: 11px; font-weight: 850; border: 1px solid #bfe0d3; vertical-align: 1px; white-space: nowrap; }
+    .post-pill[data-postidx] { cursor: pointer; }
+    .post-pill[data-postidx]:hover { background: var(--green); color: #fff; }
 
     .panel { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
     .filters { display: grid; grid-template-columns: minmax(190px, .85fr) minmax(360px, 1.65fr) minmax(190px, 1fr) auto; gap: 14px; align-items: end; padding: 17px 18px; border-bottom: 1px solid var(--line); }
@@ -357,7 +359,7 @@
 
       // 빌드 시 주석 뒤의 빈 배열만 실제 게시글 JSON 배열로 교체합니다.
       const POSTS_DATA = /*__POSTS_DATA__*/ [{"postKey": "demo-1", "title": "🍎 부사사과 5kg 공구", "createdAt": "2026-08-19T08:00:00", "comments": [{"id": "d1-1", "author": "단골이맘", "authorKey": "m1", "comment": "2박스요", "createdAt": "2026-08-19T08:05:00", "status": "주문", "note": "", "deleted": false}, {"id": "d1-2", "author": "행복한하루", "authorKey": "m2", "comment": "1", "createdAt": "2026-08-19T08:07:00", "status": "주문", "note": "", "deleted": false}, {"id": "d1-3", "author": "제인", "authorKey": "m3", "comment": "1/1", "createdAt": "2026-08-19T08:11:00", "status": "주문", "note": "", "deleted": false}, {"id": "d1-4", "author": "미소천사", "authorKey": "m4", "comment": "세 박스요", "createdAt": "2026-08-19T08:20:00", "status": "주문", "note": "", "deleted": false}, {"id": "d1-5", "author": "봄날", "authorKey": "m5", "comment": "2봉", "createdAt": "2026-08-19T08:31:00", "status": "수령", "note": "", "deleted": false}]}, {"postKey": "demo-2", "title": "🍑 딱복 천도복숭아", "createdAt": "2026-08-19T07:00:00", "comments": [{"id": "d2-1", "author": "라라", "authorKey": "m6", "comment": "1봉지요", "createdAt": "2026-08-19T07:10:00", "status": "주문", "note": "", "deleted": false}, {"id": "d2-2", "author": "단골이맘", "authorKey": "m1", "comment": "2", "createdAt": "2026-08-19T07:15:00", "status": "주문", "note": "", "deleted": false}, {"id": "d2-3", "author": "하늘색", "authorKey": "m7", "comment": "한개요", "createdAt": "2026-08-19T07:22:00", "status": "주문", "note": "", "deleted": false}, {"id": "d2-4", "author": "코코맘", "authorKey": "m8", "comment": "3봉", "createdAt": "2026-08-19T07:41:00", "status": "주문", "note": "", "deleted": false}]}, {"postKey": "demo-3", "title": "🥬 유기농 애호박·오이 묶음", "createdAt": "2026-08-18T18:00:00", "comments": [{"id": "d3-1", "author": "제인", "authorKey": "m3", "comment": "애호박 2 오이 1", "createdAt": "2026-08-18T18:05:00", "status": "주문", "note": "", "deleted": false}, {"id": "d3-2", "author": "봄날", "authorKey": "m5", "comment": "1", "createdAt": "2026-08-18T18:19:00", "status": "주문", "note": "", "deleted": false}, {"id": "d3-3", "author": "라라", "authorKey": "m6", "comment": "2", "createdAt": "2026-08-18T18:33:00", "status": "취소", "note": "고객요청", "deleted": true}]}];
-      const COLLECTED_AT = "2026. 08. 19. 16:04";
+      const COLLECTED_AT = "2026. 08. 19. 16:39";
       const BACKEND_URL = "";  // Cloudflare Worker 주소(빌드 시 주입). 없으면 새로고침으로 대체.
 
       const mockRawComments = [
@@ -412,8 +414,8 @@
       function allPost() {
         if (_allPostCache) return _allPostCache;
         // BAND comment_key는 게시글 내에서만 유일 → 전체 보기에선 게시글키로 네임스페이스해 충돌 방지
-        const comments = posts.flatMap(p => Array.isArray(p.comments)
-          ? p.comments.map(c => ({ ...c, id: `${p.postKey}::${c.id}`, _post: p.title }))
+        const comments = posts.flatMap((p, pi) => Array.isArray(p.comments)
+          ? p.comments.map(c => ({ ...c, id: `${p.postKey}::${c.id}`, _post: p.title, _postIdx: pi }))
           : []);
         _allPostCache = { title: '📋 전체 주문 (모든 게시글)', postKey: '__ALL__', comments };
         return _allPostCache;
@@ -638,7 +640,7 @@
             <td class="col-check">${admin ? '' : `<input type="checkbox" class="row-check" data-id="${escapeHtml(comment.id)}"${checkedIds.has(comment.id) ? ' checked' : ''} aria-label="${escapeHtml(comment.author)} 선택">`}</td>
             <td class="col-seq num">${admin ? '—' : sequence}</td>
             <td><div class="author"><span class="avatar" style="background:${avatarColors[index % avatarColors.length]}">${escapeHtml(String(comment.author || '?').slice(0, 1))}</span><span class="author-name">${escapeHtml(comment.author || '이름 없음')}${admin ? '<span class="admin-tag">관리자</span>' : ''}</span></div></td>
-            <td><div class="comment">${comment._post ? `<span class="post-pill">${escapeHtml(comment._post)}</span>` : ''}${escapeHtml(plainCommentText(comment.comment || ''))}${deleted}${comment._manual ? `<span class="manual-tag">직접추가</span><button class="del-manual" data-action="delManual" data-id="${escapeHtml(comment.id)}" title="이 수동주문 삭제">✕</button>` : ''}</div></td>
+            <td><div class="comment">${comment._post ? `<span class="post-pill"${comment._postIdx != null ? ` data-postidx="${comment._postIdx}" role="button" title="이 게시글만 보기"` : ''}>${escapeHtml(comment._post)}</span>` : ''}${escapeHtml(plainCommentText(comment.comment || ''))}${deleted}${comment._manual ? `<span class="manual-tag">직접추가</span><button class="del-manual" data-action="delManual" data-id="${escapeHtml(comment.id)}" title="이 수동주문 삭제">✕</button>` : ''}</div></td>
             <td>${qtyCell}</td><td>${statusCell}</td><td class="date-cell num">${formatDate(comment.createdAt)}</td><td>${noteCell}</td>
           </tr>`;
         }).join('');
@@ -954,6 +956,16 @@
       });
 
       el('orderRows').addEventListener('click', event => {
+        // 상품 라벨 클릭 → 그 게시글만 보기로 이동(검색 중이면 검색 유지)
+        const pill = event.target.closest('.post-pill[data-postidx]');
+        if (pill) {
+          selectedPostIndex = Number(pill.dataset.postidx);
+          el('postSelect').value = String(selectedPostIndex);
+          checkedIds.clear();
+          state.edits = loadPostEdits();
+          render();
+          return;
+        }
         const btn = event.target.closest('[data-action="delManual"]');
         if (!btn) return;
         const id = btn.dataset.id;
