@@ -85,6 +85,10 @@
     .table-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 15px 18px; }
     .table-head h2 { margin: 0; font-size: 15px; }
     .result-note { margin-top: 3px; color: var(--muted); font-size: 11.5px; }
+    .status-filter { display: flex; gap: 5px; margin-top: 8px; flex-wrap: wrap; }
+    .sfilter { padding: 4px 11px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface-2); color: var(--muted); font-size: 11.5px; font-weight: 800; cursor: pointer; }
+    .sfilter:hover { border-color: var(--line-strong); color: var(--text); }
+    .sfilter.active { color: #fff; background: var(--green); border-color: var(--green); }
     .actions { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
     .bulk-group { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px 4px 10px; border: 1px solid #bfe0d3; border-radius: 9px; background: var(--green-soft); }
     .bulk-label { color: var(--green-dark); font-size: 11px; font-weight: 800; white-space: nowrap; }
@@ -286,6 +290,12 @@
         <div>
           <h2>댓글 주문 목록 <span id="savedHint" class="saved-hint">✓ 자동 저장됨</span></h2>
           <div id="resultNote" class="result-note" aria-live="polite"></div>
+          <div class="status-filter" role="group" aria-label="상태 빠른 필터">
+            <button class="sfilter active" data-sf="all" type="button">전체</button>
+            <button class="sfilter" data-sf="미수령" type="button">🔴 미수령(안 찾아간)</button>
+            <button class="sfilter" data-sf="수령" type="button">수령완료</button>
+            <button class="sfilter" data-sf="취소" type="button">취소</button>
+          </div>
         </div>
         <div class="actions">
           <span class="bulk-group">
@@ -347,7 +357,7 @@
 
       // 빌드 시 주석 뒤의 빈 배열만 실제 게시글 JSON 배열로 교체합니다.
       const POSTS_DATA = /*__POSTS_DATA__*/ [{"postKey": "demo-1", "title": "🍎 부사사과 5kg 공구", "createdAt": "2026-08-19T08:00:00", "comments": [{"id": "d1-1", "author": "단골이맘", "authorKey": "m1", "comment": "2박스요", "createdAt": "2026-08-19T08:05:00", "status": "주문", "note": "", "deleted": false}, {"id": "d1-2", "author": "행복한하루", "authorKey": "m2", "comment": "1", "createdAt": "2026-08-19T08:07:00", "status": "주문", "note": "", "deleted": false}, {"id": "d1-3", "author": "제인", "authorKey": "m3", "comment": "1/1", "createdAt": "2026-08-19T08:11:00", "status": "주문", "note": "", "deleted": false}, {"id": "d1-4", "author": "미소천사", "authorKey": "m4", "comment": "세 박스요", "createdAt": "2026-08-19T08:20:00", "status": "주문", "note": "", "deleted": false}, {"id": "d1-5", "author": "봄날", "authorKey": "m5", "comment": "2봉", "createdAt": "2026-08-19T08:31:00", "status": "수령", "note": "", "deleted": false}]}, {"postKey": "demo-2", "title": "🍑 딱복 천도복숭아", "createdAt": "2026-08-19T07:00:00", "comments": [{"id": "d2-1", "author": "라라", "authorKey": "m6", "comment": "1봉지요", "createdAt": "2026-08-19T07:10:00", "status": "주문", "note": "", "deleted": false}, {"id": "d2-2", "author": "단골이맘", "authorKey": "m1", "comment": "2", "createdAt": "2026-08-19T07:15:00", "status": "주문", "note": "", "deleted": false}, {"id": "d2-3", "author": "하늘색", "authorKey": "m7", "comment": "한개요", "createdAt": "2026-08-19T07:22:00", "status": "주문", "note": "", "deleted": false}, {"id": "d2-4", "author": "코코맘", "authorKey": "m8", "comment": "3봉", "createdAt": "2026-08-19T07:41:00", "status": "주문", "note": "", "deleted": false}]}, {"postKey": "demo-3", "title": "🥬 유기농 애호박·오이 묶음", "createdAt": "2026-08-18T18:00:00", "comments": [{"id": "d3-1", "author": "제인", "authorKey": "m3", "comment": "애호박 2 오이 1", "createdAt": "2026-08-18T18:05:00", "status": "주문", "note": "", "deleted": false}, {"id": "d3-2", "author": "봄날", "authorKey": "m5", "comment": "1", "createdAt": "2026-08-18T18:19:00", "status": "주문", "note": "", "deleted": false}, {"id": "d3-3", "author": "라라", "authorKey": "m6", "comment": "2", "createdAt": "2026-08-18T18:33:00", "status": "취소", "note": "고객요청", "deleted": true}]}];
-      const COLLECTED_AT = "2026. 08. 19. 15:13";
+      const COLLECTED_AT = "2026. 08. 19. 16:04";
       const BACKEND_URL = "";  // Cloudflare Worker 주소(빌드 시 주입). 없으면 새로고침으로 대체.
 
       const mockRawComments = [
@@ -388,6 +398,7 @@
       let state = { ...loadGlobalState(), edits: {} };
       let saveTimer;
       const checkedIds = new Set();  // 일괄처리용 체크 선택(세션 유지)
+      let statusFilter = 'all';      // 상태 빠른 필터(전체/미수령/수령/취소)
 
       function localDateString(date) {
         const year = date.getFullYear();
@@ -530,6 +541,11 @@
           if (commentDate < state.dateFrom || commentDate > state.dateTo) return false;
           if (!state.includeAdmin && isAdmin(comment)) return false;
           const edit = getEdit(comment.id);
+          if (statusFilter !== 'all' && !isAdmin(comment)) {
+            const st = edit.status;
+            if (statusFilter === '미수령') { if (st !== '주문' && st !== '대기') return false; }
+            else if (st !== statusFilter) return false;
+          }
           const haystack = `${comment.author || ''} ${comment.comment || ''} ${edit.note}`.toLocaleLowerCase('ko');
           return !needle || haystack.includes(needle);
         });
@@ -843,6 +859,13 @@
       }
       el('bulkCheckedBtn').addEventListener('click', () => applyBulk(true));
       el('bulkOthersBtn').addEventListener('click', () => applyBulk(false));
+
+      // 상태 빠른 필터(미수령만 뽑기 등)
+      document.querySelectorAll('.sfilter').forEach(btn => btn.addEventListener('click', () => {
+        statusFilter = btn.dataset.sf;
+        document.querySelectorAll('.sfilter').forEach(b => b.classList.toggle('active', b === btn));
+        render();
+      }));
 
       // 연동(수동 새로고침): 백엔드가 연결돼 있으면 밴드에서 즉시 최신 댓글을 불러오고, 없으면 페이지 새로고침.
       el('syncBtn').addEventListener('click', async () => {
